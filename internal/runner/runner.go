@@ -20,10 +20,18 @@ type Runner struct {
 	state       *state.State
 	dryRun      bool
 	resumePhase int
+	plannedIDs  map[string]bool // all IDs declared in config (packages + commands)
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int) *Runner {
-	return &Runner{cfg: cfg, rep: rep, state: s, dryRun: dryRun, resumePhase: resumePhase}
+	planned := make(map[string]bool, len(cfg.Packages)+len(cfg.Commands))
+	for _, p := range cfg.Packages {
+		planned[p.ID] = true
+	}
+	for _, c := range cfg.Commands {
+		planned[c.ID] = true
+	}
+	return &Runner{cfg: cfg, rep: rep, state: s, dryRun: dryRun, resumePhase: resumePhase, plannedIDs: planned}
 }
 
 // Run executes all phases in order.
@@ -130,11 +138,19 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 	}
 }
 
-// dependenciesMet returns true if all listed IDs are in the succeeded state.
+// dependenciesMet returns true if all listed IDs are satisfied.
+// In dry-run mode, a dep is satisfied if it's in the plan (it would have been installed).
+// In a real run, it must have actually succeeded.
 func (r *Runner) dependenciesMet(deps []string) bool {
 	for _, dep := range deps {
-		if !r.state.Succeeded[dep] {
-			return false
+		if r.dryRun {
+			if !r.plannedIDs[dep] && !r.state.Succeeded[dep] {
+				return false
+			}
+		} else {
+			if !r.state.Succeeded[dep] {
+				return false
+			}
 		}
 	}
 	return true

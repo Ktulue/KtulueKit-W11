@@ -65,7 +65,7 @@
       "notes": "Large install — extended timeout. May request reboot. Install .NET SDK first."
     },
     {
-      "id": "DBeaver.DBeaver.Community",
+      "id": "dbeaver.dbeaver",
       "name": "DBeaver Community",
       "phase": 2
     },
@@ -101,7 +101,7 @@
       "notes": "Required by Nerd Fonts command in Tier 2."
     },
     {
-      "id": "GIMP.GIMP.3",
+      "id": "GIMP.GIMP",
       "name": "GIMP",
       "phase": 3
     },
@@ -250,6 +250,11 @@
       "name": "Brave Browser",
       "phase": 3,
       "notes": "Already installed."
+    },
+    {
+      "id": "Tim Kosse.FileZilla.Client",
+      "name": "FileZilla",
+      "phase": 3
     }
   ],
 
@@ -276,19 +281,11 @@
       "id": "wsl2-ubuntu",
       "name": "WSL2 (Ubuntu)",
       "phase": 4,
-      "check": "wsl --list --quiet | findstr Ubuntu",
+      "check": "wsl --list --quiet 2>nul | findstr Ubuntu",
       "command": "wsl --install",
       "reboot_after": true,
       "timeout_seconds": 120,
       "notes": "Requires a reboot before WSL2 is usable. Tool will prompt after this step."
-    },
-    {
-      "id": "filezilla",
-      "name": "FileZilla",
-      "phase": 5,
-      "check": "echo skip",
-      "command": "start https://filezilla-project.org/download.php?type=client",
-      "notes": "No winget package available. Opens direct download page."
     },
     {
       "id": "dragonruby",
