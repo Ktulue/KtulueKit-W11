@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ktulue/KtulueKit-W11/schema/ktuluekit.schema.json",
+  "title": "KtulueKit Config",
+  "description": "Declarative desired-state config for KtulueKit-W11 automated installer",
+  "type": "object",
+  "required": ["version", "metadata", "settings", "packages", "commands", "extensions"],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "version": {
+      "type": "string",
+      "description": "Schema version. Bump when breaking changes are made.",
+      "pattern": "^\\d+\\.\\d+$",
+      "examples": ["1.0"]
+    },
+
+    "metadata": {
+      "type": "object",
+      "required": ["name", "author"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string" },
+        "author":      { "type": "string" },
+        "description": { "type": "string" },
+        "repo":        { "type": "string", "format": "uri" }
+      }
+    },
+
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "log_dir": {
+          "type": "string",
+          "description": "Directory where timestamped result logs are written.",
+          "default": "./logs"
+        },
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "How many times to retry a failed install before marking it failed.",
+          "default": 1
+        },
+        "default_timeout_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "description": "Per-package install timeout in seconds. Can be overridden per item.",
+          "default": 300
+        },
+        "default_scope": {
+          "type": "string",
+          "enum": ["machine", "user"],
+          "description": "Default winget install scope. 'machine' requires admin.",
+          "default": "machine"
+        },
+        "extension_mode": {
+          "type": "string",
+          "enum": ["force", "url"],
+          "description": "'force' writes registry policy (shows 'Managed by org'). 'url' opens Chrome Web Store for manual click.",
+          "default": "url"
+        }
+      }
+    },
+
+    "packages": {
+      "type": "array",
+      "description": "Tier 1 — Winget packages. Winget natively skips already-installed apps.",
+      "items": { "$ref": "#/definitions/Package" }
+    },
+
+    "commands": {
+      "type": "array",
+      "description": "Tier 2 — Shell commands (npm, wsl, pip, etc.). Tool checks before running.",
+      "items": { "$ref": "#/definitions/Command" }
+    },
+
+    "extensions": {
+      "type": "array",
+      "description": "Tier 3 — Browser extensions installed via registry policy or URL.",
+      "items": { "$ref": "#/definitions/Extension" }
+    }
+  },
+
+  "definitions": {
+
+    "Package": {
+      "type": "object",
+      "required": ["id", "name", "phase"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Exact winget package ID. Used with 'winget install -e --id'.",
+          "examples": ["Git.Git", "Microsoft.PowerShell"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name for logs and reports."
+        },
+        "phase": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Install phase. Lower phases run first. Items within the same phase run sequentially."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["machine", "user"],
+          "description": "Override the default install scope for this package. Use 'user' for apps like Spotify."
+        },
+        "reboot_after": {
+          "type": "boolean",
+          "description": "If true, tool will prompt to reboot and resume after this package installs.",
+          "default": false
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "description": "Override the default per-package timeout."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Shown in dry-run output and logs. Use for known quirks or warnings."
+        }
+      }
+    },
+
+    "Command": {
+      "type": "object",
+      "required": ["id", "name", "phase", "check", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this command. Used in depends_on references.",
+          "examples": ["claude-code", "nerd-fonts", "wsl2-ubuntu"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name for logs and reports."
+        },
+        "phase": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Install phase. Should be >= the phase of all its dependencies."
+        },
+        "check": {
+          "type": "string",
+          "description": "Shell command to detect if this is already installed. Exit code 0 = installed, skip. Non-zero = not installed, run.",
+          "examples": ["claude --version", "wsl --status"]
+        },
+        "command": {
+          "type": "string",
+          "description": "The shell command to run for installation.",
+          "examples": ["npm install -g @anthropic-ai/claude-code"]
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of winget package IDs or command IDs that must have succeeded before this runs. If any dependency failed, this is skipped.",
+          "items": { "type": "string" },
+          "examples": [["OpenJS.NodeJS.LTS"], ["JanDeDobbeleer.OhMyPosh"]]
+        },
+        "reboot_after": {
+          "type": "boolean",
+          "description": "If true, tool will prompt to reboot and resume after this command runs.",
+          "default": false
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "description": "Override the default per-command timeout."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Shown in dry-run output and logs."
+        }
+      }
+    },
+
+    "Extension": {
+      "type": "object",
+      "required": ["id", "name", "phase", "extension_id", "browser"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this extension entry.",
+          "examples": ["ublock-origin", "dark-reader"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable display name."
+        },
+        "phase": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Install phase."
+        },
+        "extension_id": {
+          "type": "string",
+          "description": "Chrome Web Store extension ID (32-character lowercase string).",
+          "pattern": "^[a-z]{32}$",
+          "examples": ["cjpalhdlnbpafiamejdnhcphjbkeiagm"]
+        },
+        "browser": {
+          "type": "string",
+          "enum": ["brave", "chrome", "firefox"],
+          "description": "Target browser. Determines the registry path or policy mechanism used."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["force", "url"],
+          "description": "Override the global extension_mode setting for this specific extension."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Shown in dry-run output and logs."
+        }
+      }
+    }
+
+  }
+}

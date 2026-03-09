@@ -1,0 +1,365 @@
+{
+  "$schema": "./schema/ktuluekit.schema.json",
+  "version": "1.0",
+
+  "metadata": {
+    "name": "KtulueKit-W11",
+    "author": "Ktulue",
+    "description": "Personal W11 software stack — declarative desired state installer",
+    "repo": "https://github.com/Ktulue/KtulueKit-W11"
+  },
+
+  "settings": {
+    "log_dir": "./logs",
+    "retry_count": 1,
+    "default_timeout_seconds": 300,
+    "default_scope": "machine",
+    "extension_mode": "url"
+  },
+
+  "packages": [
+    {
+      "id": "Git.Git",
+      "name": "Git for Windows",
+      "phase": 1
+    },
+    {
+      "id": "Microsoft.PowerShell",
+      "name": "PowerShell 7",
+      "phase": 1,
+      "notes": "Installing PS7 while running in PS can terminate the session. Run this tool from cmd.exe or Windows Terminal if possible."
+    },
+    {
+      "id": "Microsoft.DotNet.SDK.8",
+      "name": ".NET 8 SDK",
+      "phase": 1,
+      "notes": "Install before Visual Studio. Can behave unpredictably if VS is installed simultaneously."
+    },
+    {
+      "id": "OpenJS.NodeJS.LTS",
+      "name": "Node.js LTS",
+      "phase": 1,
+      "notes": "Required by Claude Code (npm global). PATH refresh happens automatically before Tier 2 commands run."
+    },
+    {
+      "id": "Python.Python.3.12",
+      "name": "Python 3.12",
+      "phase": 1
+    },
+    {
+      "id": "Rustlang.Rustup",
+      "name": "Rust (rustup)",
+      "phase": 1
+    },
+    {
+      "id": "GoLang.Go",
+      "name": "Go",
+      "phase": 1
+    },
+    {
+      "id": "Microsoft.VisualStudio.2022.Community",
+      "name": "Visual Studio 2022 Community",
+      "phase": 2,
+      "reboot_after": true,
+      "timeout_seconds": 900,
+      "notes": "Large install — extended timeout. May request reboot. Install .NET SDK first."
+    },
+    {
+      "id": "DBeaver.DBeaver.Community",
+      "name": "DBeaver Community",
+      "phase": 2
+    },
+    {
+      "id": "7zip.7zip",
+      "name": "7-Zip",
+      "phase": 3
+    },
+    {
+      "id": "voidtools.Everything",
+      "name": "Everything (voidtools)",
+      "phase": 3
+    },
+    {
+      "id": "Microsoft.PowerToys",
+      "name": "PowerToys",
+      "phase": 3
+    },
+    {
+      "id": "ShareX.ShareX",
+      "name": "ShareX",
+      "phase": 3
+    },
+    {
+      "id": "KeePassXCTeam.KeePassXC",
+      "name": "KeePassXC",
+      "phase": 3
+    },
+    {
+      "id": "JanDeDobbeleer.OhMyPosh",
+      "name": "Oh My Posh",
+      "phase": 3,
+      "notes": "Required by Nerd Fonts command in Tier 2."
+    },
+    {
+      "id": "GIMP.GIMP.3",
+      "name": "GIMP",
+      "phase": 3
+    },
+    {
+      "id": "Inkscape.Inkscape",
+      "name": "Inkscape",
+      "phase": 3
+    },
+    {
+      "id": "KDE.Krita",
+      "name": "Krita",
+      "phase": 3
+    },
+    {
+      "id": "Audacity.Audacity",
+      "name": "Audacity",
+      "phase": 3
+    },
+    {
+      "id": "HandBrake.HandBrake",
+      "name": "HandBrake",
+      "phase": 3
+    },
+    {
+      "id": "VideoLAN.VLC",
+      "name": "VLC",
+      "phase": 3
+    },
+    {
+      "id": "KDE.Kdenlive",
+      "name": "Kdenlive",
+      "phase": 3
+    },
+    {
+      "id": "RustDesk.RustDesk",
+      "name": "RustDesk",
+      "phase": 3
+    },
+    {
+      "id": "WinSCP.WinSCP",
+      "name": "WinSCP",
+      "phase": 3
+    },
+    {
+      "id": "PuTTY.PuTTY",
+      "name": "PuTTY",
+      "phase": 3
+    },
+    {
+      "id": "WireGuard.WireGuard",
+      "name": "WireGuard",
+      "phase": 3
+    },
+    {
+      "id": "Bambulab.Bambustudio",
+      "name": "Bambu Studio",
+      "phase": 3
+    },
+    {
+      "id": "FreeCAD.FreeCAD",
+      "name": "FreeCAD",
+      "phase": 3
+    },
+    {
+      "id": "BlenderFoundation.Blender",
+      "name": "Blender",
+      "phase": 3
+    },
+    {
+      "id": "GnuCash.GnuCash",
+      "name": "GnuCash",
+      "phase": 3
+    },
+    {
+      "id": "Plex.Plex",
+      "name": "Plex Desktop",
+      "phase": 3
+    },
+    {
+      "id": "calibre.calibre",
+      "name": "Calibre",
+      "phase": 3
+    },
+    {
+      "id": "BleachBit.BleachBit",
+      "name": "BleachBit",
+      "phase": 3
+    },
+    {
+      "id": "Notepad++.Notepad++",
+      "name": "Notepad++",
+      "phase": 3,
+      "notes": "Already installed. Winget will skip harmlessly."
+    },
+    {
+      "id": "Mozilla.Firefox",
+      "name": "Firefox",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "TheDocumentFoundation.LibreOffice",
+      "name": "LibreOffice",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Atlassian.Sourcetree",
+      "name": "SourceTree",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Microsoft.VisualStudioCode",
+      "name": "VS Code",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Valve.Steam",
+      "name": "Steam",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Discord.Discord",
+      "name": "Discord",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Spotify.Spotify",
+      "name": "Spotify",
+      "phase": 3,
+      "scope": "user",
+      "notes": "Already installed. Scope 'user' required — Spotify's installer fails under admin scope."
+    },
+    {
+      "id": "OBSProject.OBSStudio",
+      "name": "OBS Studio",
+      "phase": 3,
+      "notes": "Already installed."
+    },
+    {
+      "id": "Brave.Brave",
+      "name": "Brave Browser",
+      "phase": 3,
+      "notes": "Already installed."
+    }
+  ],
+
+  "commands": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "phase": 4,
+      "check": "claude --version",
+      "command": "npm install -g @anthropic-ai/claude-code",
+      "depends_on": ["OpenJS.NodeJS.LTS"],
+      "notes": "Requires Node.js. npm must be on PATH."
+    },
+    {
+      "id": "nerd-fonts-cascadia",
+      "name": "Nerd Fonts (CaskaydiaCove)",
+      "phase": 4,
+      "check": "oh-my-posh font list | findstr CascadiaCode",
+      "command": "oh-my-posh font install CascadiaCode",
+      "depends_on": ["JanDeDobbeleer.OhMyPosh"],
+      "notes": "Requires Oh My Posh to be installed and on PATH."
+    },
+    {
+      "id": "wsl2-ubuntu",
+      "name": "WSL2 (Ubuntu)",
+      "phase": 4,
+      "check": "wsl --list --quiet | findstr Ubuntu",
+      "command": "wsl --install",
+      "reboot_after": true,
+      "timeout_seconds": 120,
+      "notes": "Requires a reboot before WSL2 is usable. Tool will prompt after this step."
+    },
+    {
+      "id": "filezilla",
+      "name": "FileZilla",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://filezilla-project.org/download.php?type=client",
+      "notes": "No winget package available. Opens direct download page."
+    },
+    {
+      "id": "dragonruby",
+      "name": "DragonRuby GTK",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://dragonruby.org",
+      "notes": "Licensed software. Tool opens the download page — manual install required."
+    },
+    {
+      "id": "meshmixer",
+      "name": "MeshMixer",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://meshmixer.com/download.html",
+      "notes": "Direct download. Tool opens the download page."
+    },
+    {
+      "id": "aseprite",
+      "name": "Aseprite",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://www.aseprite.org",
+      "notes": "One-time purchase or compile from source. Tool opens the site."
+    },
+    {
+      "id": "plexamp",
+      "name": "Plexamp",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://www.plex.tv/plexamp",
+      "notes": "Direct download from plex.tv."
+    },
+    {
+      "id": "hype-control",
+      "name": "Hype Control",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://github.com/Ktulue/HypeControl",
+      "notes": "Not yet on Chrome Web Store. Opens GitHub repo — load as unpacked extension manually. Move to extensions[] with store ID once published."
+    }
+  ],
+
+  "extensions": [
+    {
+      "id": "ublock-origin",
+      "name": "uBlock Origin",
+      "phase": 6,
+      "extension_id": "cjpalhdlnbpafiamejdnhcphjbkeiagm",
+      "browser": "brave"
+    },
+    {
+      "id": "dark-reader",
+      "name": "Dark Reader",
+      "phase": 6,
+      "extension_id": "eimadpbcbfnmbkopoojfekhnkhdbieeh",
+      "browser": "brave"
+    },
+    {
+      "id": "keepassxc-browser",
+      "name": "KeePassXC-Browser",
+      "phase": 6,
+      "extension_id": "oboonakemofpalcgghocfoadofidjkkk",
+      "browser": "brave"
+    },
+    {
+      "id": "react-devtools",
+      "name": "React Developer Tools",
+      "phase": 6,
+      "extension_id": "fmkadmapgofadopljbjfkapdkoienihi",
+      "browser": "brave"
+    }
+  ]
+}

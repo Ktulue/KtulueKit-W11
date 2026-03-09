@@ -1,0 +1,22 @@
+# Compiled binary
+ktuluekit.exe
+ktuluekit
+
+# Build output
+/dist/
+/build/
+
+# Runtime state (post-reboot resume tracking)
+.ktuluekit-state.json
+
+# Log output
+/logs/
+
+# IDE / tooling
+.claude/
+.vscode/
+*.suo
+*.user
+
+# Go
+vendor/
