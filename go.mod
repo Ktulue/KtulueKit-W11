@@ -1,10 +1,10 @@
 module github.com/Ktulue/KtulueKit-W11
 
-go 1.23
+go 1.25.0
 
 require (
 	github.com/spf13/cobra v1.8.1
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.42.0
 )
 
 require (

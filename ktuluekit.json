@@ -116,8 +116,18 @@
       "phase": 3
     },
     {
+      "id": "Tiled.Tiled",
+      "name": "Tiled",
+      "phase": 3
+    },
+    {
       "id": "Audacity.Audacity",
       "name": "Audacity",
+      "phase": 3
+    },
+    {
+      "id": "LMMS.LMMS",
+      "name": "LMMS",
       "phase": 3
     },
     {
@@ -141,16 +151,6 @@
       "phase": 3
     },
     {
-      "id": "WinSCP.WinSCP",
-      "name": "WinSCP",
-      "phase": 3
-    },
-    {
-      "id": "PuTTY.PuTTY",
-      "name": "PuTTY",
-      "phase": 3
-    },
-    {
       "id": "WireGuard.WireGuard",
       "name": "WireGuard",
       "phase": 3
@@ -163,6 +163,11 @@
     {
       "id": "FreeCAD.FreeCAD",
       "name": "FreeCAD",
+      "phase": 3
+    },
+    {
+      "id": "OpenSCAD.OpenSCAD",
+      "name": "OpenSCAD",
       "phase": 3
     },
     {
@@ -250,11 +255,6 @@
       "name": "Brave Browser",
       "phase": 3,
       "notes": "Already installed."
-    },
-    {
-      "id": "Tim Kosse.FileZilla.Client",
-      "name": "FileZilla",
-      "phase": 3
     }
   ],
 

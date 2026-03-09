@@ -41,6 +41,10 @@ Windows 11 software stack in dependency order across three tiers:
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
+	if !dryRun && !isAdmin() {
+		return fmt.Errorf("ktuluekit must be run as Administrator\n  Right-click your terminal and select 'Run as administrator', then try again")
+	}
+
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
