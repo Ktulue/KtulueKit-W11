@@ -7,15 +7,17 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
+	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/runner"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
 )
 
 var (
-	configPath  string
-	dryRun      bool
-	resumePhase int
+	configPath         string
+	dryRun             bool
+	resumePhase        int
+	noDesktopShortcuts bool
 )
 
 func main() {
@@ -33,6 +35,7 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().StringVarP(&configPath, "config", "c", "ktuluekit.json", "Path to config file")
 	root.PersistentFlags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be installed without doing it")
 	root.PersistentFlags().IntVar(&resumePhase, "resume-phase", 1, "Skip all phases before this number (for post-reboot resume)")
+	root.PersistentFlags().BoolVar(&noDesktopShortcuts, "no-desktop-shortcuts", false, "Automatically remove all desktop shortcuts created by installers (skips prompt)")
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -70,7 +73,19 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Packages: %d winget  |  %d commands  |  %d extensions\n\n",
 		len(cfg.Packages), len(cfg.Commands), len(cfg.Extensions))
 
-	r := runner.New(cfg, rep, s, dryRun, resumePhase)
+	// Determine how to handle desktop shortcuts created by installers.
+	var shortcutMode desktop.ShortcutMode
+	switch {
+	case dryRun:
+		shortcutMode = desktop.ShortcutKeep // nothing is installed, nothing to clean up
+	case noDesktopShortcuts:
+		shortcutMode = desktop.ShortcutRemove
+		fmt.Println("  Desktop shortcuts: auto-remove (--no-desktop-shortcuts)")
+	default:
+		shortcutMode = desktop.PromptMode()
+	}
+
+	r := runner.New(cfg, rep, s, dryRun, resumePhase, configPath, shortcutMode)
 	r.Run()
 
 	rep.Summary()

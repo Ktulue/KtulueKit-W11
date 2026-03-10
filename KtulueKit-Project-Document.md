@@ -35,49 +35,49 @@ These were installed manually before this tool existed. Winget natively detects 
 ### Tier 1 — Winget-native (has winget IDs)
 These can be installed via `winget install --id=<ID> -e` (already-installed apps will be harmlessly skipped by winget):
 
-| Software | Winget ID | Status |
-|---|---|---|
-| Notepad++ | Notepad++.Notepad++ | ✅ Already installed |
-| Firefox | Mozilla.Firefox | ✅ Already installed |
-| LibreOffice | TheDocumentFoundation.LibreOffice | ✅ Already installed |
-| SourceTree | Atlassian.Sourcetree | ✅ Already installed |
-| VS Code | Microsoft.VisualStudioCode | ✅ Already installed |
-| Steam | Valve.Steam | ✅ Already installed |
-| Discord | Discord.Discord | ✅ Already installed |
-| Spotify | Spotify.Spotify | ✅ Already installed |
-| OBS Studio | OBSProject.OBSStudio | ✅ Already installed |
-| Brave Browser | Brave.Brave | ✅ Already installed |
-| Git for Windows | Git.Git | ⬜ Needed |
-| PowerShell 7 | Microsoft.PowerShell | ⬜ Needed |
-| .NET 8 SDK | Microsoft.DotNet.SDK.8 | ⬜ Needed |
-| Visual Studio 2022 Community | Microsoft.VisualStudio.2022.Community | ⬜ Needed |
-| Node.js LTS | OpenJS.NodeJS.LTS | ⬜ Needed |
-| Python 3.12+ | Python.Python.3.12 | ⬜ Needed |
-| Rust (rustup) | Rustlang.Rustup | ⬜ Needed |
-| Go | GoLang.Go | ⬜ Needed |
-| 7-Zip | 7zip.7zip | ⬜ Needed |
-| Everything (voidtools) | voidtools.Everything | ⬜ Needed |
-| PowerToys | Microsoft.PowerToys | ⬜ Needed |
-| ShareX | ShareX.ShareX | ⬜ Needed |
-| KeePassXC | KeePassXCTeam.KeePassXC | ⬜ Needed |
-| Oh My Posh | JanDeDobbeleer.OhMyPosh | ⬜ Needed |
-| GIMP | GIMP.GIMP | ⬜ Needed |
-| Inkscape | Inkscape.Inkscape | ⬜ Needed |
-| Krita | KDE.Krita | ⬜ Needed |
-| Audacity | Audacity.Audacity | ⬜ Needed |
-| Handbrake | HandBrake.HandBrake | ⬜ Needed |
-| VLC | VideoLAN.VLC | ⬜ Needed |
-| Kdenlive | KDE.Kdenlive | ⬜ Needed |
-| RustDesk | RustDesk.RustDesk | ⬜ Needed |
-| WireGuard | WireGuard.WireGuard | ⬜ Needed |
-| DBeaver Community | dbeaver.dbeaver | ⬜ Needed |
-| Bambu Studio | Bambulab.Bambustudio | ⬜ Needed |
-| FreeCAD | FreeCAD.FreeCAD | ⬜ Needed |
-| Blender | BlenderFoundation.Blender | ⬜ Needed |
-| GnuCash | GnuCash.GnuCash | ⬜ Needed |
-| Plex Desktop | Plex.Plex | ⬜ Needed |
-| Calibre | calibre.calibre | ⬜ Needed |
-| BleachBit | BleachBit.BleachBit | ⬜ Needed |
+| Software | Winget ID | Status | Description |
+|---|---|---|---|
+| Notepad++ | Notepad++.Notepad++ | ✅ Already installed | Lightweight text editor for quick edits, log viewing, and config files |
+| Firefox | Mozilla.Firefox | ✅ Already installed | Secondary browser for testing and cross-browser web dev checks |
+| LibreOffice | TheDocumentFoundation.LibreOffice | ✅ Already installed | Office suite for spreadsheets and documents (free Office alternative) |
+| SourceTree | Atlassian.Sourcetree | ✅ Already installed | GUI git client for managing repos, branches, and history visually |
+| VS Code | Microsoft.VisualStudioCode | ✅ Already installed | Primary code editor for most development work |
+| Steam | Valve.Steam | ✅ Already installed | Game library and launcher |
+| Discord | Discord.Discord | ✅ Already installed | Chat for gaming communities and dev collaboration |
+| Spotify | Spotify.Spotify | ✅ Already installed | Music streaming for background work sessions |
+| OBS Studio | OBSProject.OBSStudio | ✅ Already installed | Live streaming and screen recording for Twitch and content creation |
+| Brave Browser | Brave.Brave | ✅ Already installed | Primary browser — Chromium-based, privacy-focused, runs Chrome extensions |
+| Git for Windows | Git.Git | ⬜ Needed | Version control CLI, required by VS Code, SourceTree, and Claude Code |
+| PowerShell 7 | Microsoft.PowerShell | ⬜ Needed | Modern PowerShell for scripting; required by KtulueKit and system automation |
+| .NET 8 SDK | Microsoft.DotNet.SDK.8 | ⬜ Needed | C#/.NET runtime and build tools for personal .NET projects |
+| Visual Studio 2022 Community | Microsoft.VisualStudio.2022.Community | ⬜ Needed | Full IDE for C#/.NET development (heavier than VS Code when needed) |
+| Node.js LTS | OpenJS.NodeJS.LTS | ⬜ Needed | JavaScript runtime, required for Claude Code and npm global packages |
+| Python 3.12+ | Python.Python.3.12 | ⬜ Needed | Scripting, automation, and AI/ML tooling |
+| Rust (rustup) | Rustlang.Rustup | ⬜ Needed | Systems language toolchain; career pivot portfolio and DragonRuby dependency |
+| Go | GoLang.Go | ⬜ Needed | Compiled language this tool (KtulueKit) is built in |
+| 7-Zip | 7zip.7zip | ⬜ Needed | File archiver for extracting zip, rar, 7z, and other compressed formats |
+| Everything (voidtools) | voidtools.Everything | ⬜ Needed | Instant file search across the entire drive — far faster than Windows Search |
+| PowerToys | Microsoft.PowerToys | ⬜ Needed | Windows power-user utilities: FancyZones, PowerRename, Run launcher, etc. |
+| ShareX | ShareX.ShareX | ⬜ Needed | Screenshot and screen recording tool for stream content and bug reports |
+| KeePassXC | KeePassXCTeam.KeePassXC | ⬜ Needed | Local password manager for secure credential storage |
+| Oh My Posh | JanDeDobbeleer.OhMyPosh | ⬜ Needed | Terminal prompt theming engine; required for Nerd Fonts setup |
+| GIMP | GIMP.GIMP | ⬜ Needed | Raster image editor for graphics work and photo editing |
+| Inkscape | Inkscape.Inkscape | ⬜ Needed | Vector graphics editor (SVG) for logos, icons, and print art |
+| Krita | KDE.Krita | ⬜ Needed | Digital painting and illustration tool |
+| Audacity | Audacity.Audacity | ⬜ Needed | Audio recording and editing for stream audio and voiceovers |
+| Handbrake | HandBrake.HandBrake | ⬜ Needed | Video transcoder for compressing and converting video files |
+| VLC | VideoLAN.VLC | ⬜ Needed | Universal media player — plays any video or audio format |
+| Kdenlive | KDE.Kdenlive | ⬜ Needed | Video editor for stream highlights and content creation |
+| RustDesk | RustDesk.RustDesk | ⬜ Needed | Open-source remote desktop client (self-hosted TeamViewer alternative) |
+| WireGuard | WireGuard.WireGuard | ⬜ Needed | VPN client for secure tunneling to personal/home network |
+| DBeaver Community | dbeaver.dbeaver | ⬜ Needed | GUI database client for SQL Server, PostgreSQL, and other DBs |
+| Bambu Studio | Bambulab.Bambustudio | ⬜ Needed | Slicer software for Bambu Lab 3D printers |
+| FreeCAD | FreeCAD.FreeCAD | ⬜ Needed | Parametric 3D CAD for designing and modifying printable parts |
+| Blender | BlenderFoundation.Blender | ⬜ Needed | 3D modeling, sculpting, animation, and rendering |
+| GnuCash | GnuCash.GnuCash | ⬜ Needed | Personal finance and accounting (free Quicken/YNAB alternative) |
+| Plex Desktop | Plex.Plex | ⬜ Needed | Desktop client for the Plex media server |
+| Calibre | calibre.calibre | ⬜ Needed | Ebook library manager and format converter |
+| BleachBit | BleachBit.BleachBit | ⬜ Needed | Disk cleaner and privacy tool — removes junk files and browser data |
 
 ### Intentionally excluded from Tier 1
 FileZilla, WinSCP, and PuTTY were evaluated and intentionally removed from the config. They are not included in `ktuluekit.json`.
@@ -85,32 +85,32 @@ FileZilla, WinSCP, and PuTTY were evaluated and intentionally removed from the c
 ### Tier 2 — Non-winget (needs custom install logic)
 These require npm commands, direct downloads, or other install methods:
 
-| Software | Install Method |
-|---|---|
-| Claude Code | `npm install -g @anthropic-ai/claude-code` (requires Node.js from Tier 1) |
-| Nerd Fonts (CaskaydiaCove) | `oh-my-posh font install CascadiaCode` (requires Oh My Posh from Tier 1) |
-| WSL2 (Ubuntu) | `wsl --install -d Ubuntu` from admin terminal |
-| DragonRuby GTK | Manual download (licensed, dragonruby.org) — just open URL |
-| DaVinci Resolve | Already installed, but no winget package exists for future reference |
-| Streamer.bot | Already installed, no winget package |
-| Stream Deck | Already installed, no winget package |
-| MeshMixer | Direct download from meshmixer.com |
-| Aseprite | One-time purchase or compile from source (github.com/aseprite/aseprite) |
-| Plexamp | Direct download from plex.tv/plexamp |
-| Claude Ruby Marketplace | Open github.com/hoblin/claude-ruby-marketplace — manual install |
-| Peon Ping | Open github.com/PeonPing/peon-ping — manual install |
-| DragonRuby Control | Open github.com/peterkarman1/dragonruby-control — manual install |
+| Software | Install Method | Description |
+|---|---|---|
+| Claude Code | `npm install -g @anthropic-ai/claude-code` (requires Node.js from Tier 1) | AI coding assistant CLI — primary dev workflow tool for this entire project |
+| Nerd Fonts (CaskaydiaCove) | `oh-my-posh font install CascadiaCode` (requires Oh My Posh from Tier 1) | Patched font with icons for a clean terminal and Oh My Posh prompt |
+| WSL2 (Ubuntu) | `wsl --install -d Ubuntu` from admin terminal | Linux subsystem for running Linux tools, shell scripts, and dev environments on Windows |
+| DragonRuby GTK | Manual download (licensed, dragonruby.org) — just open URL | Licensed Ruby game engine for personal game development projects |
+| DaVinci Resolve | Already installed, but no winget package exists for future reference | Professional video editor for stream VODs, content, and post-production |
+| Streamer.bot | Already installed, no winget package | Stream automation tool for Twitch events, chat commands, and bot actions |
+| Stream Deck | Already installed, no winget package | Hardware button deck software for one-press streaming shortcuts |
+| MeshMixer | Direct download from meshmixer.com | Free 3D mesh editor for repairing, hollowing, and modifying print models |
+| Aseprite | One-time purchase or compile from source (github.com/aseprite/aseprite) | Pixel art editor for game sprites, icons, and animated assets |
+| Plexamp | Direct download from plex.tv/plexamp | Dedicated Plex music player with smart shuffle and offline support |
+| Claude Ruby Marketplace | Open github.com/hoblin/claude-ruby-marketplace — manual install | Community Ruby tools and prompts for extending Claude Code workflows |
+| Peon Ping | Open github.com/PeonPing/peon-ping — manual install | Exercise reminder and rep-logging tool used as a Claude Code skill |
+| DragonRuby Control | Open github.com/peterkarman1/dragonruby-control — manual install | Gamepad/controller input library for DragonRuby game projects |
 
 ### Tier 3 — Browser Extensions (Brave / Chromium)
 Force-install via registry policy (`HKLM\Software\Policies\BraveSoftware\Brave-Browser\ExtensionInstallForcelist`) or open Chrome Web Store URLs for manual click:
 
-| Extension | Chrome Web Store ID |
-|---|---|
-| Hype Control | (my extension — get ID from Chrome Web Store listing) |
-| uBlock Origin | cjpalhdlnbpafiamejdnhcphjbkeiagm |
-| Dark Reader | eimadpbcbfnmbkopoojfekhnkhdbieeh |
-| KeePassXC-Browser | oboonakemofpalcgghocfoadofidjkkk |
-| React Developer Tools | fmkadmapgofadopljbjfkapdkoienihi |
+| Extension | Chrome Web Store ID | Description |
+|---|---|---|
+| Hype Control | (my extension — get ID from Chrome Web Store listing) | My own Twitch stream overlay and chat interaction extension |
+| uBlock Origin | cjpalhdlnbpafiamejdnhcphjbkeiagm | Ad and tracker blocker — essential on every browser |
+| Dark Reader | eimadpbcbfnmbkopoojfekhnkhdbieeh | Dark mode for all websites |
+| KeePassXC-Browser | oboonakemofpalcgghocfoadofidjkkk | Connects KeePassXC password manager to the browser for autofill |
+| React Developer Tools | fmkadmapgofadopljbjfkapdkoienihi | React component inspector for debugging React apps like HypeControl |
 
 ## What I Want to Build
 
@@ -132,6 +132,24 @@ A CLI tool or PowerShell script that:
    - The report should be displayed in the terminal AND saved to a timestamped log file (e.g., `KtulueKit_2026-03-09_results.log`) so you can reference it after a reboot
 6. **Supports dry-run mode** — show what WOULD be installed without doing it
 7. **Can be re-run safely** after a failure (idempotent — winget handles this natively for Tier 1, tool handles it for Tiers 2 and 3)
+
+## Pre-Flight Checklist
+
+### Automated (tool does this before any installs)
+
+- **System Restore point** — Before touching anything, the tool creates a restore point named `Pre-KtulueKit <timestamp>` using PowerShell's `Checkpoint-Computer`. To ensure this works regardless of Windows' built-in 24-hour cooldown between restore points (following the Chris Titus WinUtil pattern):
+  1. The `SystemRestorePointCreationFrequency` registry value at `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore` is saved, then set to `0` to bypass the cooldown.
+  2. `Enable-ComputerRestore` is called on `$env:SystemDrive` in case System Restore was turned off.
+  3. The checkpoint is created with type `APPLICATION_INSTALL`.
+  4. The original frequency value is restored in a `finally` block (or the key is removed if it didn't exist before).
+  - **Non-blocking:** If any step fails (System Restore disabled by Group Policy, GPT disk restriction, etc.) the tool logs a warning and continues. The restore point is skipped on `--resume-phase` runs since the snapshot from the original run is still valid.
+
+### Manual (verify before running)
+
+- Windows is not mid-update (finish any pending updates and reboot first)
+- Logged in as the account that will own user-scope installs (npm globals, etc.)
+- Internet access is up
+- Back up any critical in-progress work — the restore point protects the system state, not your personal files
 
 ## Known Gotchas & Design Constraints
 

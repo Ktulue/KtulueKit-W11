@@ -9,8 +9,9 @@ const stateFile = ".ktuluekit-state.json"
 
 // State tracks which item IDs have completed, so the tool can resume after reboot.
 type State struct {
-	Succeeded map[string]bool `json:"succeeded"` // ID -> true
-	Failed    map[string]bool `json:"failed"`    // ID -> true
+	Succeeded   map[string]bool `json:"succeeded"`              // ID -> true
+	Failed      map[string]bool `json:"failed"`                 // ID -> true
+	ResumePhase int             `json:"resume_phase,omitempty"` // set before triggering a reboot
 }
 
 func Load() (*State, error) {
@@ -50,6 +51,13 @@ func (s *State) MarkSucceeded(id string) {
 func (s *State) MarkFailed(id string) {
 	s.Failed[id] = true
 	_ = s.Save()
+}
+
+// SaveResumePhase records the next phase to start from and persists state.
+// Call this before triggering a reboot so the user knows what flag to pass.
+func (s *State) SaveResumePhase(phase int) error {
+	s.ResumePhase = phase
+	return s.Save()
 }
 
 // Clear deletes the state file after a clean run completes.

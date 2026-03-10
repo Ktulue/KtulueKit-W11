@@ -10,12 +10,13 @@ import (
 
 // Status values for each install result.
 const (
-	StatusInstalled    = "installed"
-	StatusAlready      = "already_installed"
-	StatusFailed       = "failed"
-	StatusSkipped      = "skipped"
-	StatusReboot       = "reboot_required"
-	StatusDryRun       = "dry_run"
+	StatusInstalled        = "installed"
+	StatusAlready          = "already_installed"
+	StatusFailed           = "failed"
+	StatusSkipped          = "skipped"
+	StatusReboot           = "reboot_required"
+	StatusDryRun           = "dry_run"
+	StatusShortcutRemoved  = "shortcut_removed"
 )
 
 // Result holds the outcome of a single install item.
@@ -78,12 +79,13 @@ func (r *Reporter) Summary() {
 		icon   string
 		label  string
 	}{
-		{StatusInstalled, "✅", "Installed successfully"},
-		{StatusAlready,   "⏭️ ", "Already installed (skipped)"},
-		{StatusDryRun,    "🔍", "Would install (dry run)"},
-		{StatusFailed,    "❌", "Failed"},
-		{StatusSkipped,   "⚠️ ", "Skipped (dependency missing)"},
-		{StatusReboot,    "🔄", "Reboot required"},
+		{StatusInstalled,       "✅", "Installed successfully"},
+		{StatusAlready,         "⏭️ ", "Already installed (skipped)"},
+		{StatusDryRun,          "🔍", "Would install (dry run)"},
+		{StatusFailed,          "❌", "Failed"},
+		{StatusSkipped,         "⚠️ ", "Skipped (dependency missing)"},
+		{StatusReboot,          "🔄", "Reboot required"},
+		{StatusShortcutRemoved, "🗑️ ", "Desktop shortcuts removed"},
 	}
 
 	header := "\n" + strings.Repeat("=", 60) + "\nSUMMARY\n" + strings.Repeat("=", 60)
@@ -125,6 +127,22 @@ func (r *Reporter) HasFailures() bool {
 	return false
 }
 
+// LogLine writes an arbitrary line directly to the log file (not stdout).
+// Used to record critical messages (e.g. resume commands) that must survive a reboot.
+func (r *Reporter) LogLine(msg string) {
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, msg)
+	}
+}
+
+// LogPath returns the absolute path of the current log file.
+func (r *Reporter) LogPath() string {
+	if r.logFile == nil {
+		return ""
+	}
+	return r.logFile.Name()
+}
+
 func (r *Reporter) Close() {
 	if r.logFile != nil {
 		r.logFile.Close()
@@ -155,6 +173,8 @@ func statusIcon(status string) string {
 		return "🔄"
 	case StatusDryRun:
 		return "🔍"
+	case StatusShortcutRemoved:
+		return "🗑️ "
 	default:
 		return "  "
 	}

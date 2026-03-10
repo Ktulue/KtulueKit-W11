@@ -4,26 +4,32 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
+	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
 	"github.com/Ktulue/KtulueKit-W11/internal/installer"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
+	"github.com/Ktulue/KtulueKit-W11/internal/restore"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
 )
 
 // Runner orchestrates the full install sequence.
 type Runner struct {
-	cfg         *config.Config
-	rep         *reporter.Reporter
-	state       *state.State
-	dryRun      bool
-	resumePhase int
-	plannedIDs  map[string]bool // all IDs declared in config (packages + commands)
+	cfg          *config.Config
+	rep          *reporter.Reporter
+	state        *state.State
+	dryRun       bool
+	resumePhase  int
+	configPath   string               // preserved so resume commands can reference the right config file
+	shortcutMode desktop.ShortcutMode // how to handle .lnk files dropped by installers
+	plannedIDs   map[string]bool      // all IDs declared in config (packages + commands)
 }
 
-func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int) *Runner {
+func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
 	planned := make(map[string]bool, len(cfg.Packages)+len(cfg.Commands))
 	for _, p := range cfg.Packages {
 		planned[p.ID] = true
@@ -31,11 +37,26 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 	for _, c := range cfg.Commands {
 		planned[c.ID] = true
 	}
-	return &Runner{cfg: cfg, rep: rep, state: s, dryRun: dryRun, resumePhase: resumePhase, plannedIDs: planned}
+	return &Runner{
+		cfg:          cfg,
+		rep:          rep,
+		state:        s,
+		dryRun:       dryRun,
+		resumePhase:  resumePhase,
+		configPath:   configPath,
+		shortcutMode: shortcutMode,
+		plannedIDs:   planned,
+	}
 }
 
 // Run executes all phases in order.
 func (r *Runner) Run() {
+	// Create a System Restore point before touching anything.
+	// Skipped on resume runs (user already has the pre-run snapshot).
+	if r.resumePhase <= 1 {
+		restore.CreateRestorePoint(r.dryRun)
+	}
+
 	phases := r.collectPhases()
 
 	pathRefreshed := false
@@ -68,6 +89,12 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			continue
 		}
 
+		// Snapshot desktops before install so we can detect new .lnk files.
+		var desktopBefore map[string]bool
+		if !r.dryRun && r.shortcutMode != desktop.ShortcutKeep {
+			desktopBefore = desktop.Snapshot()
+		}
+
 		fmt.Printf("\n  Installing: %s\n", pkg.Name)
 		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount)
 		r.rep.Add(res)
@@ -78,9 +105,49 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			r.state.MarkFailed(pkg.ID)
 		}
 
+		// Clean up any shortcuts the installer dropped on the desktop.
+		if desktopBefore != nil {
+			r.cleanupShortcuts(pkg.Name, desktopBefore)
+		}
+
 		if pkg.RebootAfter && !r.dryRun && (res.Status == reporter.StatusInstalled || res.Status == reporter.StatusReboot) {
 			r.promptReboot(pkg.Name, phase)
 		}
+	}
+}
+
+// cleanupShortcuts finds .lnk files added since before and handles them per shortcutMode.
+func (r *Runner) cleanupShortcuts(pkgName string, before map[string]bool) {
+	newLinks := desktop.NewShortcuts(before)
+	for _, path := range newLinks {
+		name := filepath.Base(path)
+
+		var remove bool
+		switch r.shortcutMode {
+		case desktop.ShortcutRemove:
+			remove = true
+		case desktop.ShortcutAsk:
+			fmt.Printf("\n  New shortcut from %s: %s\n", pkgName, name)
+			remove = desktop.PromptRemove(path)
+		}
+
+		if !remove {
+			continue
+		}
+
+		if err := desktop.Remove(path); err != nil {
+			fmt.Printf("  [warning] Could not remove shortcut %q: %v\n", name, err)
+			continue
+		}
+
+		fmt.Printf("  🗑️  Removed shortcut: %s\n", name)
+		r.rep.Add(reporter.Result{
+			ID:     "shortcut:" + path,
+			Name:   name,
+			Tier:   "shortcut",
+			Status: reporter.StatusShortcutRemoved,
+			Detail: fmt.Sprintf("from %s, created by %s", filepath.Dir(path), pkgName),
+		})
 	}
 }
 
@@ -174,14 +241,49 @@ func (r *Runner) promptManualInstall(itemName, guidance string) {
 	reader.ReadString('\n')
 }
 
-// promptReboot pauses and asks the user whether to reboot now or continue.
+// promptReboot saves state, logs the resume command to the terminal and log file,
+// then triggers a 30-second Windows reboot countdown via shutdown /r /t 30.
+// The user can press Enter within that window to cancel the reboot and continue.
 func (r *Runner) promptReboot(itemName string, currentPhase int) {
-	fmt.Printf("\n  🔄  %s requires a reboot.\n", itemName)
-	fmt.Printf("  Reboot now and re-run with --resume-phase=%d to continue, or press Enter to keep going.\n", currentPhase+1)
-	fmt.Print("  [Enter = continue | Ctrl+C = exit and reboot manually]: ")
+	nextPhase := currentPhase + 1
+	resumeCmd := fmt.Sprintf("ktuluekit --config %q --resume-phase=%d", r.configPath, nextPhase)
 
+	// Persist before doing anything else so state survives the reboot.
+	if err := r.state.SaveResumePhase(nextPhase); err != nil {
+		fmt.Printf("  [warning] Could not save resume phase to state: %v\n", err)
+	}
+
+	sep := strings.Repeat("─", 56)
+	banner := fmt.Sprintf(`
+  🔄  %s requires a reboot.
+  %s
+  RESUME COMMAND — run this after restarting:
+    %s
+  Log file: %s
+  %s
+  Rebooting in 30 seconds. Press Enter to CANCEL and continue without rebooting.
+  (To cancel from another terminal: shutdown /a)
+`, itemName, sep, resumeCmd, r.rep.LogPath(), sep)
+
+	fmt.Print(banner)
+
+	// Write the resume command to the log file so it's recoverable after reboot.
+	r.rep.LogLine(fmt.Sprintf("\n[REBOOT REQUIRED — %s]", itemName))
+	r.rep.LogLine("  Resume command: " + resumeCmd)
+	r.rep.LogLine("")
+
+	// Kick off the OS-level reboot countdown.
+	shutdownMsg := fmt.Sprintf("KtulueKit: %s requires restart. After reboot run: %s", itemName, resumeCmd)
+	// /r = restart, /t 30 = 30-second countdown, /c = comment shown in shutdown dialog
+	_ = exec.Command("shutdown", "/r", "/t", "30", "/c", shutdownMsg).Run()
+
+	// Block on stdin — if the user presses Enter we cancel the countdown.
 	reader := bufio.NewReader(os.Stdin)
 	reader.ReadString('\n')
+
+	// Cancel the scheduled reboot and continue the run.
+	_ = exec.Command("shutdown", "/a").Run()
+	fmt.Println("  Reboot cancelled. Continuing installation...")
 }
 
 // collectPhases returns a sorted list of unique phase numbers across all items.
