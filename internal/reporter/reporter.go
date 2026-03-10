@@ -114,6 +114,17 @@ func (r *Reporter) Summary() {
 	fmt.Fprintln(r.logFile)
 }
 
+// HasFailures returns true if any item failed or was skipped due to a missing dependency.
+// Used to determine whether to preserve state for resume on next run.
+func (r *Reporter) HasFailures() bool {
+	for _, res := range r.results {
+		if res.Status == StatusFailed || res.Status == StatusSkipped {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Reporter) Close() {
 	if r.logFile != nil {
 		r.logFile.Close()

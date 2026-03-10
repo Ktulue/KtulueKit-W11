@@ -39,15 +39,16 @@ type Package struct {
 
 // Command is a Tier 2 shell command.
 type Command struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Phase          int      `json:"phase"`
-	Check          string   `json:"check"`      // Shell command — exit 0 = already installed, skip
-	Cmd            string   `json:"command"`    // Install command to run
-	DependsOn      []string `json:"depends_on"` // Winget IDs or command IDs that must have succeeded
-	RebootAfter    bool     `json:"reboot_after"`
-	TimeoutSeconds int      `json:"timeout_seconds"`
-	Notes          string   `json:"notes"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	Phase           int      `json:"phase"`
+	Check           string   `json:"check"`            // Shell command — exit 0 = already installed, skip
+	Cmd             string   `json:"command"`          // Install command to run
+	DependsOn       []string `json:"depends_on"`       // Winget IDs or command IDs that must have succeeded
+	RebootAfter     bool     `json:"reboot_after"`
+	TimeoutSeconds  int      `json:"timeout_seconds"`
+	OnFailurePrompt string   `json:"on_failure_prompt"` // If set, printed to the user when the command fails, then waits for Enter
+	Notes           string   `json:"notes"`
 }
 
 // Extension is a Tier 3 browser extension.

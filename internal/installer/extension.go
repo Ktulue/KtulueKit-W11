@@ -12,13 +12,20 @@ import (
 )
 
 // Browser registry policy paths for force-installing extensions.
+// Chrome/Brave use ExtensionInstallForcelist with "<id>;<update_url>" values.
+// Firefox uses Extensions\Install with XPI URL values (AMO extension IDs, not Chrome IDs).
 var browserPolicyPaths = map[string]string{
-	"brave":  `Software\Policies\BraveSoftware\Brave-Browser\ExtensionInstallForcelist`,
-	"chrome": `Software\Policies\Google\Chrome\ExtensionInstallForcelist`,
+	"brave":   `Software\Policies\BraveSoftware\Brave-Browser\ExtensionInstallForcelist`,
+	"chrome":  `Software\Policies\Google\Chrome\ExtensionInstallForcelist`,
+	"firefox": `Software\Policies\Mozilla\Firefox\Extensions\Install`,
 }
 
-// Chrome Web Store base URL for url mode.
-const chromeStoreURL = "https://chrome.google.com/webstore/detail/"
+// Web Store / AMO base URLs for url mode.
+const (
+	chromeStoreURL  = "https://chromewebstore.google.com/detail/"
+	firefoxAMOURL   = "https://addons.mozilla.org/firefox/addon/"
+)
+
 
 // InstallExtension handles a Tier 3 browser extension.
 func InstallExtension(ext config.Extension, dryRun bool) reporter.Result {
@@ -49,8 +56,7 @@ func forceInstall(ext config.Extension, dryRun bool, res reporter.Result) report
 		return res
 	}
 
-	// Value written: "<extension_id>;https://clients2.google.com/service/update2/crx"
-	value := fmt.Sprintf("%s;https://clients2.google.com/service/update2/crx", ext.ExtensionID)
+	value := forceValue(ext.Browser, ext.ExtensionID)
 
 	if dryRun {
 		res.Status = reporter.StatusDryRun
@@ -105,9 +111,34 @@ func forceInstall(ext config.Extension, dryRun bool, res reporter.Result) report
 	return res
 }
 
-// urlInstall opens the Chrome Web Store listing for manual one-click install.
+// forceValue returns the registry value string for the given browser and extension ID.
+// Chrome/Brave use "<id>;<crx_update_url>". Firefox uses an AMO XPI URL.
+func forceValue(browser, extensionID string) string {
+	if browser == "firefox" {
+		return fmt.Sprintf("https://addons.mozilla.org/firefox/downloads/latest/%s/addon-latest.xpi", extensionID)
+	}
+	return fmt.Sprintf("%s;https://clients2.google.com/service/update2/crx", extensionID)
+}
+
+// storeURL returns the browser-appropriate extension listing URL for url mode.
+func storeURL(browser, extensionID string) string {
+	if browser == "firefox" {
+		return firefoxAMOURL + extensionID
+	}
+	return chromeStoreURL + extensionID
+}
+
+// storeLabel returns the human-readable "click to install" label for url mode.
+func storeLabel(browser string) string {
+	if browser == "firefox" {
+		return "Firefox Add-ons page opened — click 'Add to Firefox' to complete"
+	}
+	return "Chrome Web Store page opened — click 'Add to Brave/Chrome' to complete"
+}
+
+// urlInstall opens the browser's extension store listing for manual one-click install.
 func urlInstall(ext config.Extension, dryRun bool, res reporter.Result) reporter.Result {
-	url := chromeStoreURL + ext.ExtensionID
+	url := storeURL(ext.Browser, ext.ExtensionID)
 
 	if dryRun {
 		res.Status = reporter.StatusDryRun
@@ -122,6 +153,6 @@ func urlInstall(ext config.Extension, dryRun bool, res reporter.Result) reporter
 	}
 
 	res.Status = reporter.StatusInstalled
-	res.Detail = "Chrome Web Store page opened — click 'Add to Brave' to complete"
+	res.Detail = storeLabel(ext.Browser)
 	return res
 }

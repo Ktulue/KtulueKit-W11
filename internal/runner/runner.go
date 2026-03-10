@@ -113,6 +113,9 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			r.state.MarkSucceeded(cmd.ID)
 		} else if res.Status == reporter.StatusFailed || res.Status == reporter.StatusSkipped {
 			r.state.MarkFailed(cmd.ID)
+			if cmd.OnFailurePrompt != "" && !r.dryRun {
+				r.promptManualInstall(cmd.Name, cmd.OnFailurePrompt)
+			}
 		}
 
 		if cmd.RebootAfter && !r.dryRun && res.Status != reporter.StatusFailed {
@@ -154,6 +157,21 @@ func (r *Runner) dependenciesMet(deps []string) bool {
 		}
 	}
 	return true
+}
+
+// promptManualInstall prints fallback guidance when an install command fails,
+// then pauses so the user can read it before the run continues.
+func (r *Runner) promptManualInstall(itemName, guidance string) {
+	fmt.Printf("\n  ⚠️  %s failed to install automatically.\n", itemName)
+	fmt.Println("  ──────────────────────────────────────────────────")
+	fmt.Println("  Manual install instructions:")
+	for _, line := range strings.Split(guidance, "\n") {
+		fmt.Printf("    %s\n", line)
+	}
+	fmt.Println("  ──────────────────────────────────────────────────")
+	fmt.Print("  Press Enter when done (or to skip and continue)... ")
+	reader := bufio.NewReader(os.Stdin)
+	reader.ReadString('\n')
 }
 
 // promptReboot pauses and asks the user whether to reboot now or continue.

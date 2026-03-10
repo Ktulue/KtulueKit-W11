@@ -67,7 +67,7 @@
     {
       "id": "dbeaver.dbeaver",
       "name": "DBeaver Community",
-      "phase": 2
+      "phase": 3
     },
     {
       "id": "7zip.7zip",
@@ -282,7 +282,7 @@
       "name": "WSL2 (Ubuntu)",
       "phase": 4,
       "check": "wsl --list --quiet 2>nul | findstr Ubuntu",
-      "command": "wsl --install",
+      "command": "wsl --install -d Ubuntu",
       "reboot_after": true,
       "timeout_seconds": 120,
       "notes": "Requires a reboot before WSL2 is usable. Tool will prompt after this step."
@@ -326,6 +326,32 @@
       "check": "echo skip",
       "command": "start https://github.com/Ktulue/HypeControl",
       "notes": "Not yet on Chrome Web Store. Opens GitHub repo — load as unpacked extension manually. Move to extensions[] with store ID once published."
+    },
+    {
+      "id": "claude-ruby-marketplace",
+      "name": "Claude Ruby Marketplace",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://github.com/hoblin/claude-ruby-marketplace",
+      "notes": "Opens GitHub repo for review and manual install."
+    },
+    {
+      "id": "peon-ping",
+      "name": "Peon Ping",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "git clone https://github.com/PeonPing/peon-ping && cd peon-ping && bash install.sh",
+      "depends_on": ["Python.Python.3.12", "Git.Git"],
+      "on_failure_prompt": "1. Open an admin PowerShell window\n2. Run: git clone https://github.com/PeonPing/peon-ping\n3. Run: cd peon-ping\n4. Run: bash install.sh (or bash peon.sh if install.sh is not found)\n5. Follow any prompts in the installer\n6. Verify the install completed before pressing Enter.",
+      "notes": "Requires Python and Git. Clones repo and runs install.sh via bash. Falls back to manual guidance if it fails."
+    },
+    {
+      "id": "dragonruby-control",
+      "name": "DragonRuby Control",
+      "phase": 5,
+      "check": "echo skip",
+      "command": "start https://github.com/peterkarman1/dragonruby-control",
+      "notes": "Opens GitHub repo for review and manual install."
     }
   ],
 

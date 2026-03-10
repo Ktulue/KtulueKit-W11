@@ -49,7 +49,7 @@ func RunCommand(cmd config.Command, dryRun bool, retryCount int, s *state.State)
 	}
 
 	// Check if already installed
-	if isAlreadyInstalled(cmd.Check, cmd.TimeoutSeconds) {
+	if isAlreadyInstalled(cmd.Check) {
 		res.Status = reporter.StatusAlready
 		res.Detail = fmt.Sprintf("check passed: %s", cmd.Check)
 		return res
@@ -88,12 +88,16 @@ func RunCommand(cmd config.Command, dryRun bool, retryCount int, s *state.State)
 	return res
 }
 
+// checkTimeoutSeconds is a short timeout used for "already installed?" detection commands.
+// These commands (e.g. "claude --version") should complete in well under 15 seconds.
+const checkTimeoutSeconds = 15
+
 // isAlreadyInstalled runs the check command and returns true if exit code is 0.
-func isAlreadyInstalled(checkCmd string, timeoutSeconds int) bool {
+func isAlreadyInstalled(checkCmd string) bool {
 	if checkCmd == "" || checkCmd == "echo skip" {
 		return false
 	}
-	code, _ := runShellWithTimeout(checkCmd, timeoutSeconds)
+	code, _ := runShellWithTimeout(checkCmd, checkTimeoutSeconds)
 	return code == 0
 }
 

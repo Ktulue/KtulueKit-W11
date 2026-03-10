@@ -69,9 +69,6 @@ These can be installed via `winget install --id=<ID> -e` (already-installed apps
 | VLC | VideoLAN.VLC | ⬜ Needed |
 | Kdenlive | KDE.Kdenlive | ⬜ Needed |
 | RustDesk | RustDesk.RustDesk | ⬜ Needed |
-| FileZilla | Tim Kosse.FileZilla.Client | ⬜ Needed |
-| WinSCP | WinSCP.WinSCP | ⬜ Needed |
-| PuTTY | PuTTY.PuTTY | ⬜ Needed |
 | WireGuard | WireGuard.WireGuard | ⬜ Needed |
 | DBeaver Community | dbeaver.dbeaver | ⬜ Needed |
 | Bambu Studio | Bambulab.Bambustudio | ⬜ Needed |
@@ -82,6 +79,9 @@ These can be installed via `winget install --id=<ID> -e` (already-installed apps
 | Calibre | calibre.calibre | ⬜ Needed |
 | BleachBit | BleachBit.BleachBit | ⬜ Needed |
 
+### Intentionally excluded from Tier 1
+FileZilla, WinSCP, and PuTTY were evaluated and intentionally removed from the config. They are not included in `ktuluekit.json`.
+
 ### Tier 2 — Non-winget (needs custom install logic)
 These require npm commands, direct downloads, or other install methods:
 
@@ -89,17 +89,17 @@ These require npm commands, direct downloads, or other install methods:
 |---|---|
 | Claude Code | `npm install -g @anthropic-ai/claude-code` (requires Node.js from Tier 1) |
 | Nerd Fonts (CaskaydiaCove) | `oh-my-posh font install CascadiaCode` (requires Oh My Posh from Tier 1) |
-| WSL2 (Ubuntu) | `wsl --install` from admin terminal |
+| WSL2 (Ubuntu) | `wsl --install -d Ubuntu` from admin terminal |
 | DragonRuby GTK | Manual download (licensed, dragonruby.org) — just open URL |
 | DaVinci Resolve | Already installed, but no winget package exists for future reference |
 | Streamer.bot | Already installed, no winget package |
 | Stream Deck | Already installed, no winget package |
 | MeshMixer | Direct download from meshmixer.com |
 | Aseprite | One-time purchase or compile from source (github.com/aseprite/aseprite) |
-| OpenSCAD | Verify if winget ID exists, otherwise direct download |
-| Tiled | Verify if winget ID exists, otherwise direct download |
-| LMMS | Verify if winget ID exists, otherwise direct download |
 | Plexamp | Direct download from plex.tv/plexamp |
+| Claude Ruby Marketplace | Open github.com/hoblin/claude-ruby-marketplace — manual install |
+| Peon Ping | Open github.com/PeonPing/peon-ping — manual install |
+| DragonRuby Control | Open github.com/peterkarman1/dragonruby-control — manual install |
 
 ### Tier 3 — Browser Extensions (Brave / Chromium)
 Force-install via registry policy (`HKLM\Software\Policies\BraveSoftware\Brave-Browser\ExtensionInstallForcelist`) or open Chrome Web Store URLs for manual click:

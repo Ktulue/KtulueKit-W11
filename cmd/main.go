@@ -62,7 +62,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	if dryRun {
-		fmt.Println("DRY RUN — no changes will be made.\n")
+		fmt.Println("DRY RUN — no changes will be made.")
+		fmt.Println()
 	}
 
 	fmt.Printf("Config:  %s\n", configPath)
@@ -74,7 +75,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	rep.Summary()
 
-	if !dryRun {
+	// Only clear state on a fully clean run. If anything failed or was skipped,
+	// preserve state so --resume-phase re-runs know what already succeeded.
+	if !dryRun && !rep.HasFailures() {
 		_ = state.Clear()
 	}
 

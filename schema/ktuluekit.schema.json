@@ -172,6 +172,10 @@
           "minimum": 30,
           "description": "Override the default per-command timeout."
         },
+        "on_failure_prompt": {
+          "type": "string",
+          "description": "If the command fails, this message is printed as manual install guidance and the tool pauses for user acknowledgment. Supports multi-line via \\n."
+        },
         "notes": {
           "type": "string",
           "description": "Shown in dry-run output and logs."
