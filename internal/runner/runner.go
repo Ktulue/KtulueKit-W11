@@ -96,10 +96,10 @@ func (r *Runner) runPackagesInPhase(phase int) {
 		}
 
 		fmt.Printf("\n  Installing: %s\n", pkg.Name)
-		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount)
+		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount, r.cfg.Settings.UpgradeIfInstalled)
 		r.rep.Add(res)
 
-		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
+		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(pkg.ID)
 		} else if res.Status == reporter.StatusFailed {
 			r.state.MarkFailed(pkg.ID)

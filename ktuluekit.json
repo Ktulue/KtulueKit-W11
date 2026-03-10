@@ -14,52 +14,61 @@
     "retry_count": 1,
     "default_timeout_seconds": 300,
     "default_scope": "machine",
-    "extension_mode": "url"
+    "extension_mode": "url",
+    "upgrade_if_installed": true
   },
 
   "packages": [
     {
       "id": "Git.Git",
       "name": "Git for Windows",
-      "phase": 1
+      "phase": 1,
+      "check": "git --version"
     },
     {
       "id": "Microsoft.PowerShell",
       "name": "PowerShell 7",
       "phase": 1,
+      "check": "pwsh --version",
       "notes": "Installing PS7 while running in PS can terminate the session. Run this tool from cmd.exe or Windows Terminal if possible."
     },
     {
       "id": "Microsoft.DotNet.SDK.8",
       "name": ".NET 8 SDK",
       "phase": 1,
+      "check": "dotnet --list-sdks 2>nul | findstr \"^8\\.\"",
       "notes": "Install before Visual Studio. Can behave unpredictably if VS is installed simultaneously."
     },
     {
       "id": "OpenJS.NodeJS.LTS",
       "name": "Node.js LTS",
       "phase": 1,
+      "check": "node --version",
       "notes": "Required by Claude Code (npm global). PATH refresh happens automatically before Tier 2 commands run."
     },
     {
       "id": "Python.Python.3.12",
       "name": "Python 3.12",
-      "phase": 1
+      "phase": 1,
+      "check": "winget list --id Python.Python.3.12 -e --accept-source-agreements"
     },
     {
       "id": "Rustlang.Rustup",
       "name": "Rust (rustup)",
-      "phase": 1
+      "phase": 1,
+      "check": "rustup --version"
     },
     {
       "id": "GoLang.Go",
       "name": "Go",
-      "phase": 1
+      "phase": 1,
+      "check": "go version"
     },
     {
       "id": "Microsoft.VisualStudio.2022.Community",
       "name": "Visual Studio 2022 Community",
       "phase": 2,
+      "check": "winget list --id Microsoft.VisualStudio.2022.Community -e --accept-source-agreements",
       "reboot_after": true,
       "timeout_seconds": 900,
       "notes": "Large install — extended timeout. May request reboot. Install .NET SDK first."
@@ -67,180 +76,214 @@
     {
       "id": "dbeaver.dbeaver",
       "name": "DBeaver Community",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id dbeaver.dbeaver -e --accept-source-agreements"
     },
     {
       "id": "7zip.7zip",
       "name": "7-Zip",
-      "phase": 3
+      "phase": 3,
+      "check": "7z i >nul 2>&1"
     },
     {
       "id": "voidtools.Everything",
       "name": "Everything (voidtools)",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id voidtools.Everything -e --accept-source-agreements"
     },
     {
       "id": "Microsoft.PowerToys",
       "name": "PowerToys",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Microsoft.PowerToys -e --accept-source-agreements"
     },
     {
       "id": "ShareX.ShareX",
       "name": "ShareX",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id ShareX.ShareX -e --accept-source-agreements"
     },
     {
       "id": "KeePassXCTeam.KeePassXC",
       "name": "KeePassXC",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id KeePassXCTeam.KeePassXC -e --accept-source-agreements"
     },
     {
       "id": "JanDeDobbeleer.OhMyPosh",
       "name": "Oh My Posh",
       "phase": 3,
+      "check": "oh-my-posh --version",
       "notes": "Required by Nerd Fonts command in Tier 2."
     },
     {
       "id": "GIMP.GIMP",
       "name": "GIMP",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id GIMP.GIMP -e --accept-source-agreements"
     },
     {
       "id": "Inkscape.Inkscape",
       "name": "Inkscape",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Inkscape.Inkscape -e --accept-source-agreements"
     },
     {
       "id": "KDE.Krita",
       "name": "Krita",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id KDE.Krita -e --accept-source-agreements"
     },
     {
       "id": "Tiled.Tiled",
       "name": "Tiled",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Tiled.Tiled -e --accept-source-agreements"
     },
     {
       "id": "Audacity.Audacity",
       "name": "Audacity",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Audacity.Audacity -e --accept-source-agreements"
     },
     {
       "id": "LMMS.LMMS",
       "name": "LMMS",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id LMMS.LMMS -e --accept-source-agreements"
     },
     {
       "id": "HandBrake.HandBrake",
       "name": "HandBrake",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id HandBrake.HandBrake -e --accept-source-agreements"
     },
     {
       "id": "VideoLAN.VLC",
       "name": "VLC",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id VideoLAN.VLC -e --accept-source-agreements"
     },
     {
       "id": "KDE.Kdenlive",
       "name": "Kdenlive",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id KDE.Kdenlive -e --accept-source-agreements"
     },
     {
       "id": "RustDesk.RustDesk",
       "name": "RustDesk",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id RustDesk.RustDesk -e --accept-source-agreements"
     },
     {
       "id": "WireGuard.WireGuard",
       "name": "WireGuard",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id WireGuard.WireGuard -e --accept-source-agreements"
     },
     {
       "id": "Bambulab.Bambustudio",
       "name": "Bambu Studio",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Bambulab.Bambustudio -e --accept-source-agreements"
     },
     {
       "id": "FreeCAD.FreeCAD",
       "name": "FreeCAD",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id FreeCAD.FreeCAD -e --accept-source-agreements"
     },
     {
       "id": "OpenSCAD.OpenSCAD",
       "name": "OpenSCAD",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id OpenSCAD.OpenSCAD -e --accept-source-agreements"
     },
     {
       "id": "BlenderFoundation.Blender",
       "name": "Blender",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id BlenderFoundation.Blender -e --accept-source-agreements"
     },
     {
       "id": "GnuCash.GnuCash",
       "name": "GnuCash",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id GnuCash.GnuCash -e --accept-source-agreements"
     },
     {
       "id": "Plex.Plex",
       "name": "Plex Desktop",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id Plex.Plex -e --accept-source-agreements"
     },
     {
       "id": "calibre.calibre",
       "name": "Calibre",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id calibre.calibre -e --accept-source-agreements"
     },
     {
       "id": "BleachBit.BleachBit",
       "name": "BleachBit",
-      "phase": 3
+      "phase": 3,
+      "check": "winget list --id BleachBit.BleachBit -e --accept-source-agreements"
     },
     {
       "id": "Notepad++.Notepad++",
       "name": "Notepad++",
       "phase": 3,
-      "notes": "Already installed. Winget will skip harmlessly."
+      "check": "winget list --id Notepad++.Notepad++ -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Mozilla.Firefox",
       "name": "Firefox",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id Mozilla.Firefox -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "TheDocumentFoundation.LibreOffice",
       "name": "LibreOffice",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id TheDocumentFoundation.LibreOffice -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Atlassian.Sourcetree",
       "name": "SourceTree",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id Atlassian.Sourcetree -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Microsoft.VisualStudioCode",
       "name": "VS Code",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "code --version",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Valve.Steam",
       "name": "Steam",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id Valve.Steam -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Discord.Discord",
       "name": "Discord",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id Discord.Discord -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Spotify.Spotify",
       "name": "Spotify",
       "phase": 3,
+      "check": "winget list --id Spotify.Spotify -e --accept-source-agreements",
       "scope": "user",
       "notes": "Already installed. Scope 'user' required — Spotify's installer fails under admin scope."
     },
@@ -248,13 +291,36 @@
       "id": "OBSProject.OBSStudio",
       "name": "OBS Studio",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id OBSProject.OBSStudio -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
     },
     {
       "id": "Brave.Brave",
       "name": "Brave Browser",
       "phase": 3,
-      "notes": "Already installed."
+      "check": "winget list --id Brave.Brave -e --accept-source-agreements",
+      "notes": "Already installed. Pre-check will skip or upgrade."
+    },
+    {
+      "id": "Postman.Postman",
+      "name": "Postman",
+      "phase": 3,
+      "check": "winget list --id Postman.Postman -e --accept-source-agreements",
+      "notes": "API development and testing platform."
+    },
+    {
+      "id": "Anthropic.Claude",
+      "name": "Claude Desktop",
+      "phase": 3,
+      "check": "winget list --id Anthropic.Claude -e --accept-source-agreements",
+      "notes": "Claude desktop app — includes Claude Cowork for background tasks."
+    },
+    {
+      "id": "Pencil.Desktop",
+      "name": "Pencil Desktop",
+      "phase": 3,
+      "check": "winget list --id Pencil.Desktop -e --accept-source-agreements",
+      "notes": "Agent-driven MCP design canvas that lives in your codebase. Design on canvas, land in code. From pencil.dev."
     }
   ],
 
@@ -352,37 +418,207 @@
       "check": "echo skip",
       "command": "start https://github.com/peterkarman1/dragonruby-control",
       "notes": "Opens GitHub repo for review and manual install."
+    },
+
+    {
+      "id": "stream-deck",
+      "name": "Elgato Stream Deck",
+      "phase": 3,
+      "check": "echo skip",
+      "command": "echo Already installed — no automated installer",
+      "notes": "Elgato Stream Deck software. Tracks desired state in summary only. Download: https://www.elgato.com/downloads"
+    },
+    {
+      "id": "streamerbot",
+      "name": "Streamer.bot",
+      "phase": 3,
+      "check": "echo skip",
+      "command": "echo Already installed — no automated installer",
+      "notes": "Streamer.bot automation software. Tracks desired state in summary only. Download: https://streamer.bot"
+    },
+    {
+      "id": "davinci-resolve",
+      "name": "DaVinci Resolve",
+      "phase": 3,
+      "check": "echo skip",
+      "command": "echo Already installed — no automated installer",
+      "notes": "Blackmagic DaVinci Resolve. Tracks desired state in summary only. Download: https://www.blackmagicdesign.com/products/davinciresolve"
+    },
+
+    {
+      "id": "git-config-editor",
+      "name": "Git: core.editor",
+      "phase": 4,
+      "check": "git config --global core.editor",
+      "command": "git config --global core.editor \"code --wait\"",
+      "depends_on": ["Git.Git", "Microsoft.VisualStudioCode"],
+      "notes": "Sets VS Code as the default git editor for commit messages and interactive rebase."
+    },
+    {
+      "id": "git-config-credential",
+      "name": "Git: credential.helper",
+      "phase": 4,
+      "check": "git config --global credential.helper",
+      "command": "git config --global credential.helper manager",
+      "depends_on": ["Git.Git"],
+      "notes": "Enables Git Credential Manager to store credentials securely."
+    },
+
+    {
+      "id": "ps-profile-omp",
+      "name": "PowerShell Profile: Oh My Posh",
+      "phase": 4,
+      "check": "pwsh -NoProfile -Command \"if (Test-Path $PROFILE) { if (Select-String 'oh-my-posh' $PROFILE -Quiet) { exit 0 } else { exit 1 } } else { exit 1 }\"",
+      "command": "pwsh -NoProfile -Command \"if (!(Test-Path $PROFILE)) { New-Item -Path $PROFILE -Type File -Force }; if (!(Select-String 'oh-my-posh' $PROFILE -Quiet -EA SilentlyContinue)) { Add-Content $PROFILE 'oh-my-posh init pwsh | Invoke-Expression' }\"",
+      "depends_on": ["Microsoft.PowerShell", "JanDeDobbeleer.OhMyPosh"],
+      "notes": "Appends 'oh-my-posh init pwsh | Invoke-Expression' to the PS7 $PROFILE. Idempotent — skips if already present."
+    },
+
+    {
+      "id": "wt-font-config",
+      "name": "Windows Terminal: CaskaydiaCove Font",
+      "phase": 4,
+      "check": "type \"%LOCALAPPDATA%\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState\\settings.json\" 2>nul | findstr /i \"CaskaydiaCove\"",
+      "command": "pwsh -NoProfile -Command \"$p=$env:LOCALAPPDATA+'\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState\\settings.json'; $s=Get-Content $p|ConvertFrom-Json; if(!$s.profiles.defaults){$s.profiles|Add-Member -Force defaults @{}}; $s.profiles.defaults|Add-Member -Force font @{face='CaskaydiaCove Nerd Font'}; $s|ConvertTo-Json -Depth 20|Set-Content $p\"",
+      "depends_on": ["nerd-fonts-cascadia"],
+      "notes": "Sets CaskaydiaCove Nerd Font as the default in Windows Terminal (Store version). Required for Oh My Posh glyphs to render correctly."
+    },
+
+    {
+      "id": "npm-typescript",
+      "name": "npm: TypeScript",
+      "phase": 4,
+      "check": "tsc --version",
+      "command": "npm install -g typescript",
+      "depends_on": ["OpenJS.NodeJS.LTS"],
+      "notes": "Global TypeScript compiler."
+    },
+    {
+      "id": "npm-prettier",
+      "name": "npm: Prettier",
+      "phase": 4,
+      "check": "prettier --version",
+      "command": "npm install -g prettier",
+      "depends_on": ["OpenJS.NodeJS.LTS"],
+      "notes": "Global Prettier code formatter."
+    },
+
+    {
+      "id": "pip-pipx",
+      "name": "pip: pipx",
+      "phase": 4,
+      "check": "pipx --version",
+      "command": "python -m pip install --user pipx && python -m pipx ensurepath",
+      "depends_on": ["Python.Python.3.12"],
+      "notes": "Installs pipx for isolated Python CLI tool environments."
+    },
+    {
+      "id": "pip-black",
+      "name": "pip: black",
+      "phase": 4,
+      "check": "black --version",
+      "command": "pipx install black",
+      "depends_on": ["Python.Python.3.12", "pip-pipx"],
+      "notes": "Python code formatter via pipx."
+    },
+    {
+      "id": "pip-ruff",
+      "name": "pip: ruff",
+      "phase": 4,
+      "check": "ruff --version",
+      "command": "pipx install ruff",
+      "depends_on": ["Python.Python.3.12", "pip-pipx"],
+      "notes": "Fast Python linter via pipx."
+    },
+
+    {
+      "id": "vscode-ext-go",
+      "name": "VS Code: Go",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"golang.go\"",
+      "command": "code --install-extension golang.go",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "Official Go extension (syntax, debugging, go tools)."
+    },
+    {
+      "id": "vscode-ext-python",
+      "name": "VS Code: Python",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"ms-python.python\"",
+      "command": "code --install-extension ms-python.python",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "Official Python extension (IntelliSense, debugging, linting)."
+    },
+    {
+      "id": "vscode-ext-eslint",
+      "name": "VS Code: ESLint",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"dbaeumer.vscode-eslint\"",
+      "command": "code --install-extension dbaeumer.vscode-eslint",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "ESLint integration for VS Code."
+    },
+    {
+      "id": "vscode-ext-prettier",
+      "name": "VS Code: Prettier",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"esbenp.prettier-vscode\"",
+      "command": "code --install-extension esbenp.prettier-vscode",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "Prettier formatter integration for VS Code."
+    },
+    {
+      "id": "vscode-ext-gitlens",
+      "name": "VS Code: GitLens",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"eamodio.gitlens\"",
+      "command": "code --install-extension eamodio.gitlens",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "Git blame, history, and visualization supercharged."
+    },
+    {
+      "id": "vscode-ext-csharp",
+      "name": "VS Code: C#",
+      "phase": 4,
+      "check": "code --list-extensions 2>nul | findstr /i \"ms-dotnettools.csharp\"",
+      "command": "code --install-extension ms-dotnettools.csharp",
+      "depends_on": ["Microsoft.VisualStudioCode"],
+      "notes": "Official C# extension. Complements .NET 8 SDK and VS 2022."
+    },
+
+    {
+      "id": "windows-show-extensions",
+      "name": "Windows: Show File Extensions",
+      "phase": 4,
+      "check": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /v HideFileExt | findstr \"0x0\"",
+      "command": "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /v HideFileExt /t REG_DWORD /d 0 /f",
+      "notes": "Disables hiding known file extensions in Explorer."
+    },
+    {
+      "id": "windows-show-hidden",
+      "name": "Windows: Show Hidden Files",
+      "phase": 4,
+      "check": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /v Hidden | findstr \"0x1\"",
+      "command": "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\" /v Hidden /t REG_DWORD /d 1 /f",
+      "notes": "Enables showing hidden files and folders in Explorer."
+    },
+    {
+      "id": "windows-developer-mode",
+      "name": "Windows: Developer Mode",
+      "phase": 4,
+      "check": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock\" /v AllowDevelopmentWithoutDevLicense | findstr \"0x1\"",
+      "command": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock\" /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 1 /f",
+      "notes": "Enables Developer Mode. Required for symlinks without admin, sideloading apps. Requires running as admin."
+    },
+    {
+      "id": "windows-dark-mode",
+      "name": "Windows: Dark Mode",
+      "phase": 4,
+      "check": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\" /v AppsUseLightTheme | findstr \"0x0\"",
+      "command": "reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\" /v AppsUseLightTheme /t REG_DWORD /d 0 /f && reg add \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize\" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f",
+      "notes": "Enables dark mode for both apps and system UI."
     }
   ],
 
-  "extensions": [
-    {
-      "id": "ublock-origin",
-      "name": "uBlock Origin",
-      "phase": 6,
-      "extension_id": "cjpalhdlnbpafiamejdnhcphjbkeiagm",
-      "browser": "brave"
-    },
-    {
-      "id": "dark-reader",
-      "name": "Dark Reader",
-      "phase": 6,
-      "extension_id": "eimadpbcbfnmbkopoojfekhnkhdbieeh",
-      "browser": "brave"
-    },
-    {
-      "id": "keepassxc-browser",
-      "name": "KeePassXC-Browser",
-      "phase": 6,
-      "extension_id": "oboonakemofpalcgghocfoadofidjkkk",
-      "browser": "brave"
-    },
-    {
-      "id": "react-devtools",
-      "name": "React Developer Tools",
-      "phase": 6,
-      "extension_id": "fmkadmapgofadopljbjfkapdkoienihi",
-      "browser": "brave"
-    }
-  ]
+  "extensions": []
 }

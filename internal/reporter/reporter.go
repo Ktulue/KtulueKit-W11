@@ -11,6 +11,7 @@ import (
 // Status values for each install result.
 const (
 	StatusInstalled        = "installed"
+	StatusUpgraded         = "upgraded"
 	StatusAlready          = "already_installed"
 	StatusFailed           = "failed"
 	StatusSkipped          = "skipped"
@@ -80,6 +81,7 @@ func (r *Reporter) Summary() {
 		label  string
 	}{
 		{StatusInstalled,       "✅", "Installed successfully"},
+		{StatusUpgraded,        "⬆️ ", "Updated to newer version"},
 		{StatusAlready,         "⏭️ ", "Already installed (skipped)"},
 		{StatusDryRun,          "🔍", "Would install (dry run)"},
 		{StatusFailed,          "❌", "Failed"},
@@ -163,6 +165,8 @@ func statusIcon(status string) string {
 	switch status {
 	case StatusInstalled:
 		return "✅"
+	case StatusUpgraded:
+		return "⬆️ "
 	case StatusAlready:
 		return "⏭️ "
 	case StatusFailed:

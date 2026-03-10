@@ -24,6 +24,7 @@ type Settings struct {
 	DefaultTimeoutSeconds int    `json:"default_timeout_seconds"`
 	DefaultScope          string `json:"default_scope"`
 	ExtensionMode         string `json:"extension_mode"`
+	UpgradeIfInstalled    bool   `json:"upgrade_if_installed"` // If true and check passes, run winget upgrade instead of skipping
 }
 
 // Package is a Tier 1 winget package.
@@ -32,6 +33,8 @@ type Package struct {
 	Name           string `json:"name"`
 	Phase          int    `json:"phase"`
 	Scope          string `json:"scope"`           // "machine" | "user" — empty means use Settings.DefaultScope
+	Check          string `json:"check"`           // Optional shell command — exit 0 = already installed, skip winget
+	Version        string `json:"version"`         // Optional — pin to a specific winget package version
 	RebootAfter    bool   `json:"reboot_after"`
 	TimeoutSeconds int    `json:"timeout_seconds"` // 0 means use Settings.DefaultTimeoutSeconds
 	Notes          string `json:"notes"`

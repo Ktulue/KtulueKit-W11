@@ -12,8 +12,9 @@ import (
 )
 
 // InstallPackage runs a single winget install for a Tier 1 package.
+// If upgradeIfInstalled is true and the pre-check passes, runs winget upgrade instead of skipping.
 // Returns a Result reflecting what happened.
-func InstallPackage(pkg config.Package, dryRun bool, retryCount int) reporter.Result {
+func InstallPackage(pkg config.Package, dryRun bool, retryCount int, upgradeIfInstalled bool) reporter.Result {
 	res := reporter.Result{
 		ID:   pkg.ID,
 		Name: pkg.Name,
@@ -27,6 +28,17 @@ func InstallPackage(pkg config.Package, dryRun bool, retryCount int) reporter.Re
 	if dryRun {
 		res.Status = reporter.StatusDryRun
 		res.Detail = fmt.Sprintf("winget install -e --id %s --scope %s", pkg.ID, pkg.Scope)
+		return res
+	}
+
+	// Pre-check: if a check command is provided and passes, either upgrade or skip.
+	if pkg.Check != "" && isAlreadyInstalled(pkg.Check) {
+		if upgradeIfInstalled {
+			fmt.Printf("    already installed — checking for updates...\n")
+			return runWingetUpgrade(pkg, retryCount)
+		}
+		res.Status = reporter.StatusAlready
+		res.Detail = fmt.Sprintf("pre-check passed: %s", pkg.Check)
 		return res
 	}
 
@@ -62,6 +74,9 @@ func buildWingetArgs(pkg config.Package) []string {
 		"--accept-package-agreements",
 		"--accept-source-agreements",
 		"--disable-interactivity",
+	}
+	if pkg.Version != "" {
+		args = append(args, "--version", pkg.Version)
 	}
 	return args
 }
@@ -106,6 +121,52 @@ func classifyWingetExit(code int, runErr error) (status, detail string) {
 		}
 		return reporter.StatusFailed, detail
 	}
+}
+
+// runWingetUpgrade attempts to upgrade an already-installed package.
+// Exit 0 → StatusUpgraded; "no update applicable" codes → StatusAlready; other failures → StatusFailed.
+func runWingetUpgrade(pkg config.Package, retryCount int) reporter.Result {
+	res := reporter.Result{
+		ID:   pkg.ID,
+		Name: pkg.Name,
+		Tier: "winget",
+	}
+
+	args := []string{
+		"upgrade",
+		"-e",
+		"--id", pkg.ID,
+		"--scope", pkg.Scope,
+		"--accept-package-agreements",
+		"--accept-source-agreements",
+		"--disable-interactivity",
+	}
+
+	var exitCode int
+	var err error
+
+	for attempt := 0; attempt <= retryCount; attempt++ {
+		if attempt > 0 {
+			fmt.Printf("    retrying upgrade %s (attempt %d)...\n", pkg.Name, attempt+1)
+			time.Sleep(3 * time.Second)
+		}
+		exitCode, err = runWithTimeout(args, pkg.TimeoutSeconds)
+		if err == nil || exitCode == 0 {
+			break
+		}
+	}
+
+	res.ExitCode = exitCode
+	status, detail := classifyWingetExit(exitCode, err)
+
+	// Translate a clean install exit into "upgraded" since we know it was already present.
+	if status == reporter.StatusInstalled {
+		status = reporter.StatusUpgraded
+	}
+
+	res.Status = status
+	res.Detail = detail
+	return res
 }
 
 // runWithTimeout executes winget with the given args and a timeout.

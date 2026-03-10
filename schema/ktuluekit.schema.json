@@ -61,6 +61,11 @@
           "enum": ["force", "url"],
           "description": "'force' writes registry policy (shows 'Managed by org'). 'url' opens Chrome Web Store for manual click.",
           "default": "url"
+        },
+        "upgrade_if_installed": {
+          "type": "boolean",
+          "description": "If true and the check command passes (package is already installed), run 'winget upgrade' instead of skipping.",
+          "default": false
         }
       }
     },
@@ -109,6 +114,16 @@
           "type": "string",
           "enum": ["machine", "user"],
           "description": "Override the default install scope for this package. Use 'user' for apps like Spotify."
+        },
+        "check": {
+          "type": "string",
+          "description": "Shell command to detect if this package is already installed. Exit code 0 = installed (skip or upgrade). Non-zero = not installed, run winget.",
+          "examples": ["winget list --id Git.Git -e --accept-source-agreements", "git --version"]
+        },
+        "version": {
+          "type": "string",
+          "description": "Pin to a specific package version. Passed to winget as '--version'. Useful for runtimes where major-version bumps are undesirable.",
+          "examples": ["20.18.1", "3.12.0"]
         },
         "reboot_after": {
           "type": "boolean",
