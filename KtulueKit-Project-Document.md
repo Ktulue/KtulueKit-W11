@@ -177,6 +177,16 @@ These are real issues discovered from WinUtil bug reports, winget-cli GitHub iss
 
 15. **Network failures.** A flaky internet connection mid-batch can cause downloads to fail. **Solution:** On failure, retry once before logging as failed. The re-run capability (idempotency) handles the rest — user can just run again later.
 
+## Post-Install Notes
+
+These are manual configuration steps that cannot be automated by the tool. Complete them after the relevant software has been installed.
+
+### SourceTree
+
+1. **Set default GitHub authentication:** Open SourceTree → Tools → Options → Authentication. Add your GitHub account and set it as the default for `github.com`. Without this, SourceTree will re-prompt for authentication on every push/pull/fetch operation.
+
+2. **Switch to System Git (if auth prompts persist):** If repeated authentication prompts continue despite step 1, go to Tools → Options → Git → Git Version and switch from **Embedded Git** to **System Git**. This uses the Git for Windows install (Tier 1) which shares credential storage with the rest of the system.
+
 ## Language Decision Needed
 
 I need help deciding which language to build this in. The options:
