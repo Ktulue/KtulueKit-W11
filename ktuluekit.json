@@ -292,8 +292,8 @@
       "name": "DragonRuby GTK",
       "phase": 5,
       "check": "echo skip",
-      "command": "start https://dragonruby.org",
-      "notes": "Licensed software. Tool opens the download page — manual install required."
+      "command": "start https://itch.io/library",
+      "notes": "Lifetime license via itch.io. Tool opens your itch.io library — download and install DragonRuby GTK manually from there."
     },
     {
       "id": "meshmixer",

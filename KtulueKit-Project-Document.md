@@ -40,7 +40,7 @@ These can be installed via `winget install --id=<ID> -e` (already-installed apps
 | Notepad++ | Notepad++.Notepad++ | ✅ Already installed | Lightweight text editor for quick edits, log viewing, and config files |
 | Firefox | Mozilla.Firefox | ✅ Already installed | Secondary browser for testing and cross-browser web dev checks |
 | LibreOffice | TheDocumentFoundation.LibreOffice | ✅ Already installed | Office suite for spreadsheets and documents (free Office alternative) |
-| SourceTree | Atlassian.Sourcetree | ✅ Already installed | GUI git client for managing repos, branches, and history visually |
+| SourceTree | Atlassian.Sourcetree | ✅ Already installed | GUI git client for managing repos, branches, and history visually. **Note:** As of v3.4.27+, winget installs the "Enterprise" MSI variant — functionally identical to standard SourceTree; "Enterprise" just means MSI-packaged for managed deployment. |
 | VS Code | Microsoft.VisualStudioCode | ✅ Already installed | Primary code editor for most development work |
 | Steam | Valve.Steam | ✅ Already installed | Game library and launcher |
 | Discord | Discord.Discord | ✅ Already installed | Chat for gaming communities and dev collaboration |
@@ -172,6 +172,8 @@ These are real issues discovered from WinUtil bug reports, winget-cli GitHub iss
 7. **Winget import bails on ambiguity.** The native `winget import` command stops processing the entire list if it hits one ambiguous package. **Solution:** Don't use `winget import` at all. Run individual installs with error handling per package — if one fails, log it and continue to the next.
 
 8. **Exit code handling.** Winget returns exit code 0 for success and various non-zero codes for failures. The script must capture the exit code after EACH install and categorize the result (success, already installed, failed, needs reboot).
+
+8a. **Atlassian.Sourcetree installs the "Enterprise" MSI variant as of v3.4.27+.** There is only one winget ID (`Atlassian.Sourcetree`) — Atlassian rebranded the standard installer to "Enterprise" and switched it from EXE to MSI. Both are functionally identical; "Enterprise" just means it supports managed/silent deployment. If the user had a pre-3.4.27 EXE install alongside the new MSI install, they should uninstall the old EXE via Add/Remove Programs and keep the MSI — settings won't auto-migrate between the two. No config change needed; the winget ID is already correct.
 
 ### Reboot Considerations
 

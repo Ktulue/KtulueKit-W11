@@ -67,19 +67,40 @@ func buildWingetArgs(pkg config.Package) []string {
 }
 
 // classifyWingetExit maps winget exit codes to Result statuses.
-// Reference: https://github.com/microsoft/winget-cli/blob/master/doc/windows/package-manager/winget/returnCodes.md
+//
+// Windows HRESULTs are 32-bit signed values. Go's exec.ExitCode() returns an
+// int (64-bit on amd64), so a code like 0x8A15002B arrives as 2316632107 (large
+// positive) rather than -1978335189. Casting to int32 before the switch restores
+// the expected sign so the cases match correctly.
+//
+// Reference: https://github.com/microsoft/winget-cli/blob/master/src/AppInstallerSharedLib/Public/AppInstallerErrors.h
 func classifyWingetExit(code int, runErr error) (status, detail string) {
-	switch code {
+	switch int32(code) {
 	case 0:
 		return reporter.StatusInstalled, ""
-	case -1978335189: // 0x8A150013 — already installed
-		return reporter.StatusAlready, "winget: already installed"
-	case -1978335212: // 0x8A1500F4 — no applicable upgrade
-		return reporter.StatusAlready, "winget: no available upgrade found"
-	case -1978335215: // 0x8A150011 — install blocked by policy / reboot pending
+
+	// ── Already up to date / nothing to do ────────────────────────────────
+	case -1978335189: // 0x8A15002B — UPDATE_NOT_APPLICABLE
+		return reporter.StatusAlready, "winget: no update applicable (already up to date)"
+	case -1978335212: // 0x8A150014 — NO_APPLICATIONS_FOUND (no upgrade available)
+		return reporter.StatusAlready, "winget: no applicable upgrade found"
+	case -1978335216: // 0x8A150010 — NO_APPLICABLE_INSTALLER (already installed via other method)
+		return reporter.StatusAlready, "winget: no applicable installer (package may already be installed)"
+
+	// ── Reboot / environment ───────────────────────────────────────────────
+	case -1978335215: // 0x8A150011 — install blocked / reboot pending
 		return reporter.StatusReboot, "winget: reboot may be required"
+
+	// ── Real failures ──────────────────────────────────────────────────────
+	case -1978335146: // 0x8A150056 — INSTALLER_PROHIBITS_ELEVATION
+		return reporter.StatusFailed, "winget: installer prohibits elevation (try --scope user or run without admin)"
+	case -1978334968: // 0x8A150108 — INSTALL_CONTACT_SUPPORT
+		return reporter.StatusFailed, "winget: installer error (contact support)"
+	case -1978334957: // 0x8A150113 — INSTALL_SYSTEM_NOT_SUPPORTED
+		return reporter.StatusFailed, "winget: system does not meet package requirements"
+
 	default:
-		detail := fmt.Sprintf("exit code %d", code)
+		detail := fmt.Sprintf("exit code %d (0x%08X)", code, uint32(code))
 		if runErr != nil {
 			detail += fmt.Sprintf(": %s", runErr.Error())
 		}
