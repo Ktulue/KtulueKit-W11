@@ -28,6 +28,18 @@ const (
 	colorReset  = "\033[0m"
 )
 
+// ProgressEvent is emitted by the runner to report GUI progress.
+// When OnProgress is nil (CLI mode), fmt.Printf is used instead.
+type ProgressEvent struct {
+	Index   int    // 1-based position in the run
+	Total   int    // total items in this run
+	ID      string // item ID
+	Name    string // item display name
+	Status  string // "installing"|"installed"|"upgraded"|"already"|"failed"|"skipped"|"reboot"|"reboot_cancelled"|"shortcut_removed"
+	Detail  string // raw output line, error message, or OnFailurePrompt text
+	Elapsed string // "1m 23s" — empty for "installing" events
+}
+
 // Runner orchestrates the full install sequence.
 type Runner struct {
 	cfg          *config.Config
@@ -38,8 +50,11 @@ type Runner struct {
 	configPath   string               // preserved so resume commands can reference the right config file
 	shortcutMode desktop.ShortcutMode // how to handle .lnk files dropped by installers
 	plannedIDs   map[string]bool      // all IDs declared in config (packages + commands)
-	totalItems   int                  // total items in phases >= resumePhase
-	itemIdx      int                  // current item index (1-based, increments each item)
+	totalItems     int                  // total items in phases >= resumePhase
+	itemIdx        int                  // current item index (1-based, increments each item)
+	selectedIDs    map[string]bool      // nil = run all (CLI mode); set by SetSelectedIDs
+	onProgress     func(ProgressEvent)  // nil = print to stdout (CLI mode); set by SetOnProgress
+	rebootResponse chan bool             // nil = no reboot pending; set by SetRebootResponse
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
@@ -62,22 +77,43 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 	}
 }
 
+// SetSelectedIDs limits the run to the given item IDs. Items not in the set
+// are silently skipped and not counted in totalItems. nil = run all (CLI mode).
+func (r *Runner) SetSelectedIDs(ids []string) {
+	r.selectedIDs = make(map[string]bool, len(ids))
+	for _, id := range ids {
+		r.selectedIDs[id] = true
+	}
+}
+
+// SetOnProgress wires a callback for live GUI progress events.
+// When nil (CLI mode), the runner prints to stdout via fmt.Printf as usual.
+func (r *Runner) SetOnProgress(fn func(ProgressEvent)) {
+	r.onProgress = fn
+}
+
+// SetRebootResponse provides the channel the runner blocks on when a reboot
+// is required in GUI mode. ConfirmReboot/CancelReboot send on this channel.
+func (r *Runner) SetRebootResponse(ch chan bool) {
+	r.rebootResponse = ch
+}
+
 // countItemsFromPhase returns the total number of items across all tiers
 // in phases >= fromPhase. Used to drive the [N/Total] progress counter.
 func (r *Runner) countItemsFromPhase(fromPhase int) int {
 	count := 0
 	for _, p := range r.cfg.Packages {
-		if p.Phase >= fromPhase {
+		if p.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[p.ID]) {
 			count++
 		}
 	}
 	for _, c := range r.cfg.Commands {
-		if c.Phase >= fromPhase {
+		if c.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[c.ID]) {
 			count++
 		}
 	}
 	for _, e := range r.cfg.Extensions {
-		if e.Phase >= fromPhase {
+		if e.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[e.ID]) {
 			count++
 		}
 	}
