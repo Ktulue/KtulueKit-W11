@@ -61,6 +61,15 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 
 // Run executes all phases in order.
 func (r *Runner) Run() {
+	// Fail fast if winget is missing or broken.
+	if !r.dryRun {
+		if err := installer.CheckWingetAvailable(); err != nil {
+			fmt.Printf("ERROR: winget is not available: %v\n", err)
+			fmt.Println("Install App Installer from the Microsoft Store, then re-run.")
+			return
+		}
+	}
+
 	// Create a System Restore point before touching anything.
 	// Skipped on resume runs (user already has the pre-run snapshot).
 	if r.resumePhase <= 1 {

@@ -11,6 +11,14 @@ import (
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 )
 
+// CheckWingetAvailable verifies that winget is on PATH and functional.
+// Returns an error if winget is missing or does not respond within 5 seconds.
+func CheckWingetAvailable() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return exec.CommandContext(ctx, "winget", "--version").Run()
+}
+
 // InstallPackage runs a single winget install for a Tier 1 package.
 // If upgradeIfInstalled is true and the pre-check passes, runs winget upgrade instead of skipping.
 // Returns a Result reflecting what happened.
