@@ -143,6 +143,19 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			continue
 		}
 
+		// State-aware skip: if a previous run already succeeded, don't re-check or re-install.
+		if r.state.Succeeded[pkg.ID] {
+			fmt.Printf("\n  Skipping (already succeeded): %s\n", pkg.Name)
+			r.rep.Add(reporter.Result{
+				ID:     pkg.ID,
+				Name:   pkg.Name,
+				Tier:   "winget",
+				Status: reporter.StatusAlready,
+				Detail: "already succeeded in a previous run",
+			})
+			continue
+		}
+
 		// Snapshot desktops before install so we can detect new .lnk files.
 		var desktopBefore map[string]bool
 		if !r.dryRun && r.shortcutMode != desktop.ShortcutKeep {
@@ -209,6 +222,19 @@ func (r *Runner) cleanupShortcuts(pkgName string, before map[string]bool) {
 func (r *Runner) runCommandsInPhase(phase int) {
 	for _, cmd := range r.cfg.Commands {
 		if cmd.Phase != phase {
+			continue
+		}
+
+		// State-aware skip: if a previous run already succeeded, don't re-check or re-run.
+		if r.state.Succeeded[cmd.ID] {
+			fmt.Printf("\n  Skipping (already succeeded): %s\n", cmd.Name)
+			r.rep.Add(reporter.Result{
+				ID:     cmd.ID,
+				Name:   cmd.Name,
+				Tier:   "command",
+				Status: reporter.StatusAlready,
+				Detail: "already succeeded in a previous run",
+			})
 			continue
 		}
 
