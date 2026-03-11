@@ -79,13 +79,13 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## Medium Feature Additions (50-150 lines each)
 
-- [ ] **`validate` subcommand** — `ktuluekit validate` parses and validates the config, reports errors, and exits. No installs. Useful when editing JSON by hand.
+- [x] **`validate` subcommand** — `ktuluekit validate` parses and validates the config, reports errors, and exits. No installs. Useful when editing JSON by hand.
 
-- [ ] **`list` subcommand** — `ktuluekit list` dumps all items grouped by phase/tier. Quick reference without dry-run simulation.
+- [x] **`list` subcommand** — `ktuluekit list` dumps all items grouped by phase/tier. Quick reference without dry-run simulation.
 
-- [ ] **`--only <ids>` flag** — Install/upgrade only specific package IDs. Filter the config before handing to the runner. Comma-separated list.
+- [x] **`--only <ids>` flag** — Install/upgrade only specific package IDs. Filter the config before handing to the runner. Comma-separated list.
 
-- [ ] **`--exclude <ids>` flag** — Skip specific packages during a run. Same filtering approach as `--only`.
+- [x] **`--exclude <ids>` flag** — Skip specific packages during a run. Same filtering approach as `--only`.
 
 - [ ] **`--phase N` (single phase)** — Run only phase N, not N through end. Different from `--resume-phase` which runs from N onward.
 
