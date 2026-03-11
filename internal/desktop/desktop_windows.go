@@ -45,9 +45,21 @@ func NewShortcuts(before map[string]bool) []string {
 	return added
 }
 
-// Remove deletes a single .lnk file.
-func Remove(path string) error {
-	return os.Remove(path)
+// backupDir returns the path to the KtulueKit Shortcuts folder on the user's desktop.
+func backupDir() string {
+	home := os.Getenv("USERPROFILE")
+	return filepath.Join(home, "Desktop", "KtulueKit Shortcuts")
+}
+
+// Backup moves a .lnk file into the "KtulueKit Shortcuts" folder on the desktop
+// instead of permanently deleting it. Creates the folder if it doesn't exist.
+func Backup(path string) error {
+	dir := backupDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
+	}
+	dest := filepath.Join(dir, filepath.Base(path))
+	return os.Rename(path, dest)
 }
 
 // PromptMode asks the user once at startup how to handle new desktop shortcuts.

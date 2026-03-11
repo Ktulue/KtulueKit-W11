@@ -3,6 +3,7 @@ package installer
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,6 +12,46 @@ import (
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 )
+
+// CheckConnectivity verifies that the machine can reach the internet via DNS.
+// Returns (true, "") on success. On failure returns (false, reason) where reason
+// includes a LAN-mode hint when a non-loopback network interface is active —
+// this catches the common case of being on a LAN without internet access.
+func CheckConnectivity() (ok bool, reason string) {
+	_, err := net.LookupHost("dns.msftncsi.com")
+	if err == nil {
+		return true, ""
+	}
+
+	// DNS failed — check if there's an active non-loopback interface.
+	// If so, the machine is on a LAN but has no internet route.
+	ifaces, ifErr := net.Interfaces()
+	if ifErr == nil {
+		for _, iface := range ifaces {
+			if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+				continue
+			}
+			addrs, _ := iface.Addrs()
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				if ip != nil && !ip.IsLoopback() && ip.To4() != nil {
+					return false, fmt.Sprintf(
+						"LAN connection detected (%s on %s) but no internet access — winget requires internet to download packages",
+						ip, iface.Name,
+					)
+				}
+			}
+		}
+	}
+
+	return false, "no network connectivity detected — winget requires internet to download packages"
+}
 
 // CheckWingetAvailable verifies that winget is on PATH and functional.
 // Returns an error if winget is missing or does not respond within 5 seconds.

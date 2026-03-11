@@ -126,6 +126,9 @@ func (r *Runner) Run() {
 
 	// Fail fast if winget is missing or broken.
 	if !r.dryRun {
+		if ok, reason := installer.CheckConnectivity(); !ok {
+			fmt.Printf("%s[WARNING]%s %s\n\n", colorYellow, colorReset, reason)
+		}
 		if err := installer.CheckWingetAvailable(); err != nil {
 			fmt.Printf("ERROR: winget is not available: %v\n", err)
 			fmt.Println("Install App Installer from the Microsoft Store, then re-run.")
@@ -316,18 +319,18 @@ func (r *Runner) cleanupShortcuts(pkgName string, before map[string]bool) {
 			continue
 		}
 
-		if err := desktop.Remove(path); err != nil {
-			fmt.Printf("  [warning] Could not remove shortcut %q: %v\n", name, err)
+		if err := desktop.Backup(path); err != nil {
+			fmt.Printf("  [warning] Could not back up shortcut %q: %v\n", name, err)
 			continue
 		}
 
-		fmt.Printf("  🗑️  Removed shortcut: %s\n", name)
+		fmt.Printf("  📁  Backed up shortcut: %s → KtulueKit Shortcuts/\n", name)
 		r.rep.Add(reporter.Result{
 			ID:     "shortcut:" + path,
 			Name:   name,
 			Tier:   "shortcut",
 			Status: reporter.StatusShortcutRemoved,
-			Detail: fmt.Sprintf("from %s, created by %s", filepath.Dir(path), pkgName),
+			Detail: fmt.Sprintf("moved to KtulueKit Shortcuts/ on desktop (created by %s)", pkgName),
 		})
 	}
 }
