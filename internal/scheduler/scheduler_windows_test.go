@@ -66,3 +66,18 @@ func TestBuildTaskScript_QuotesBinaryPathWithSpaces(t *testing.T) {
 		t.Error("binary path with spaces is not double-quoted in -Execute — will fail at runtime")
 	}
 }
+
+func TestBuildTaskScript_QuotesConfigPathWithSpaces(t *testing.T) {
+	// --config in -Argument must be double-quoted so the resumed binary receives
+	// the full path when it contains spaces (e.g. C:\My Projects\ktuluekit.json).
+	script := buildTaskScript(
+		`C:\tools\ktuluekit.exe`,
+		`C:\My Projects\ktuluekit.json`,
+		`C:\tools`,
+		2,
+	)
+
+	if !strings.Contains(script, `"C:\My Projects\ktuluekit.json"`) {
+		t.Error("config path with spaces is not double-quoted in -Argument — will fail at runtime")
+	}
+}
