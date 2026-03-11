@@ -15,11 +15,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("config parse error: %w", err)
 	}
 
-	paths := configPaths
-	if len(paths) == 0 {
-		paths = []string{"ktuluekit.json"}
+	displayPaths := configPaths
+	if len(displayPaths) == 0 {
+		displayPaths = []string{config.DefaultConfigPath}
 	}
-	fmt.Printf("Validating config: %v\n", paths)
+	fmt.Printf("Validating config: %v\n", displayPaths)
 
 	errs := config.Validate(cfg)
 	if len(errs) == 0 {

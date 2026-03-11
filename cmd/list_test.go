@@ -11,13 +11,15 @@ import (
 func TestListCmd_LoadsConfig(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "k.json")
-	os.WriteFile(f, []byte(`{
+	if err := os.WriteFile(f, []byte(`{
 		"version": "1.0",
 		"metadata": {"name": "Test"},
 		"packages": [{"id": "Git.Git", "name": "Git", "phase": 1}],
 		"commands": [{"id": "npm-ts", "name": "TypeScript", "phase": 4, "check": "tsc --version", "command": "npm i -g typescript"}],
 		"settings": {}
-	}`), 0644)
+	}`), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
 
 	cfg, err := config.LoadAll([]string{f})
 	if err != nil {

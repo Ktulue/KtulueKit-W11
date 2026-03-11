@@ -11,12 +11,14 @@ import (
 func TestValidateCmd_ValidConfig(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "k.json")
-	os.WriteFile(f, []byte(`{
+	if err := os.WriteFile(f, []byte(`{
 		"version": "1.0",
 		"metadata": {"name": "Test"},
 		"packages": [{"id": "Git.Git", "name": "Git", "phase": 1}],
 		"settings": {}
-	}`), 0644)
+	}`), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
 
 	cfg, err := config.LoadAll([]string{f})
 	if err != nil {
@@ -32,14 +34,16 @@ func TestValidateCmd_InvalidConfig(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "k.json")
 	// version missing, duplicate ID
-	os.WriteFile(f, []byte(`{
+	if err := os.WriteFile(f, []byte(`{
 		"metadata": {"name": "Test"},
 		"packages": [
 			{"id": "dup", "name": "A", "phase": 1},
 			{"id": "dup", "name": "B", "phase": 1}
 		],
 		"settings": {}
-	}`), 0644)
+	}`), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
 
 	cfg, err := config.LoadAll([]string{f})
 	if err != nil {

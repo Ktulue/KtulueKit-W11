@@ -6,6 +6,9 @@ import (
 	"os"
 )
 
+// DefaultConfigPath is the config file used when no --config flag is provided.
+const DefaultConfigPath = "ktuluekit.json"
+
 // Load reads and parses the single config file at path.
 // It is a convenience wrapper around LoadAll.
 func Load(path string) (*Config, error) {
@@ -19,7 +22,7 @@ func Load(path string) (*Config, error) {
 // If paths is empty, it defaults to ["ktuluekit.json"].
 func LoadAll(paths []string) (*Config, error) {
 	if len(paths) == 0 {
-		paths = []string{"ktuluekit.json"}
+		paths = []string{DefaultConfigPath}
 	}
 
 	var merged Config

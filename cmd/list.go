@@ -38,6 +38,12 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 	sort.Ints(phases)
 
+	for ph := range byPhase {
+		sort.Slice(byPhase[ph], func(i, j int) bool {
+			return byPhase[ph][i].id < byPhase[ph][j].id
+		})
+	}
+
 	for _, ph := range phases {
 		fmt.Printf("\n── Phase %d ──────────────────────────────────────\n", ph)
 		for _, item := range byPhase[ph] {
