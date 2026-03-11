@@ -1,79 +1,79 @@
 <script>
-  import logo from './assets/images/logo-universal.png'
-  import {Greet} from '../wailsjs/go/main/App.js'
+  import { onMount } from 'svelte'
+  import { GetConfig, StartInstall } from '../wailsjs/go/main/App'
+  import { EventsOn } from '../wailsjs/runtime/runtime'
+  import SelectionScreen from './screens/SelectionScreen.svelte'
+  import ProgressScreen from './screens/ProgressScreen.svelte'
+  import SummaryScreen from './screens/SummaryScreen.svelte'
 
-  let resultText = "Please enter your name below 👇"
-  let name
+  // screen: 'selection' | 'progress' | 'summary'
+  let screen = 'selection'
+  let configView = null
+  let progressEvents = []
+  let summaryResult = null
+  let adminError = null
 
-  function greet() {
-    Greet(name).then(result => resultText = result)
+  onMount(async () => {
+    configView = await GetConfig()
+
+    EventsOn('progress', (event) => {
+      progressEvents = [...progressEvents, event]
+    })
+
+    EventsOn('complete', (result) => {
+      summaryResult = result
+      screen = 'summary'
+    })
+  })
+
+  async function handleStartInstall(selectedIds) {
+    progressEvents = []
+    const err = await StartInstall(selectedIds)
+    if (err) {
+      alert(err)
+      return
+    }
+    screen = 'progress'
+  }
+
+  function handleClose() {
+    window.close()
   }
 </script>
 
 <main>
-  <img alt="Wails logo" id="logo" src="{logo}">
-  <div class="result" id="result">{resultText}</div>
-  <div class="input-box" id="input">
-    <input autocomplete="off" bind:value={name} class="input" id="name" type="text"/>
-    <button class="btn" on:click={greet}>Greet</button>
-  </div>
+  {#if adminError}
+    <div class="error-screen">
+      <h1>Administrator required</h1>
+      <p>Right-click the .exe and choose "Run as administrator".</p>
+    </div>
+  {:else if screen === 'selection'}
+    <SelectionScreen {configView} onStart={handleStartInstall} />
+  {:else if screen === 'progress'}
+    <ProgressScreen events={progressEvents} />
+  {:else if screen === 'summary'}
+    <SummaryScreen result={summaryResult} onClose={handleClose} />
+  {/if}
 </main>
 
 <style>
-
-  #logo {
-    display: block;
-    width: 50%;
-    height: 50%;
-    margin: auto;
-    padding: 10% 0 0;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-origin: content-box;
+  :global(body) {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
   }
-
-  .result {
-    height: 20px;
-    line-height: 20px;
-    margin: 1.5rem auto;
+  main {
+    height: 100vh;
+    overflow: hidden;
   }
-
-  .input-box .btn {
-    width: 60px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 3px;
-    border: none;
-    margin: 0 0 0 20px;
-    padding: 0 8px;
-    cursor: pointer;
+  .error-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 1rem;
+    color: #ff6b6b;
   }
-
-  .input-box .btn:hover {
-    background-image: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
-    color: #333333;
-  }
-
-  .input-box .input {
-    border: none;
-    border-radius: 3px;
-    outline: none;
-    height: 30px;
-    line-height: 30px;
-    padding: 0 10px;
-    background-color: rgba(240, 240, 240, 1);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .input-box .input:hover {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
-  }
-
-  .input-box .input:focus {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
-  }
-
 </style>
