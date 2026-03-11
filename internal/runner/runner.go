@@ -14,6 +14,7 @@ import (
 	"github.com/Ktulue/KtulueKit-W11/internal/installer"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/restore"
+	"github.com/Ktulue/KtulueKit-W11/internal/scheduler"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
 )
 
@@ -241,9 +242,9 @@ func (r *Runner) promptManualInstall(itemName, guidance string) {
 	reader.ReadString('\n')
 }
 
-// promptReboot saves state, logs the resume command to the terminal and log file,
-// then triggers a 30-second Windows reboot countdown via shutdown /r /t 30.
-// The user can press Enter within that window to cancel the reboot and continue.
+// promptReboot saves state, registers an auto-resume Scheduled Task, logs the
+// resume command, then triggers a 30-second Windows reboot countdown.
+// The user can press Enter to cancel the reboot and continue installing.
 func (r *Runner) promptReboot(itemName string, currentPhase int) {
 	nextPhase := currentPhase + 1
 	resumeCmd := fmt.Sprintf("ktuluekit --config %q --resume-phase=%d", r.configPath, nextPhase)
@@ -253,28 +254,49 @@ func (r *Runner) promptReboot(itemName string, currentPhase int) {
 		fmt.Printf("  [warning] Could not save resume phase to state: %v\n", err)
 	}
 
+	// Register the auto-resume Scheduled Task.
+	binaryPath, _ := os.Executable()
+	absConfig, _ := filepath.Abs(r.configPath)
+	cwd, _ := os.Getwd()
+
+	taskRegistered := false
+	if err := scheduler.CreateResumeTask(binaryPath, absConfig, cwd, nextPhase, r.dryRun); err != nil {
+		fmt.Printf("  [warning] Could not register auto-resume task: %v\n", err)
+	} else {
+		taskRegistered = true
+	}
+
+	// Build and print the reboot banner.
 	sep := strings.Repeat("─", 56)
+	var taskLine string
+	if r.dryRun {
+		taskLine = "  [dry-run] Auto-resume task would be registered.\n"
+	} else if taskRegistered {
+		taskLine = "  ✅ Auto-resume task registered — will run automatically after login.\n" +
+			"  To cancel task: schtasks /delete /tn KtulueKit-Resume /f\n"
+	} else {
+		taskLine = "  ⚠️  Auto-resume task NOT registered. Run manually after reboot:\n" +
+			"    " + resumeCmd + "\n"
+	}
+
 	banner := fmt.Sprintf(`
   🔄  %s requires a reboot.
   %s
-  RESUME COMMAND — run this after restarting:
-    %s
-  Log file: %s
+%s  Log file: %s
   %s
   Rebooting in 30 seconds. Press Enter to CANCEL and continue without rebooting.
   (To cancel from another terminal: shutdown /a)
-`, itemName, sep, resumeCmd, r.rep.LogPath(), sep)
+`, itemName, sep, taskLine, r.rep.LogPath(), sep)
 
 	fmt.Print(banner)
 
-	// Write the resume command to the log file so it's recoverable after reboot.
+	// Always write resume command to log — recoverable regardless of task status.
 	r.rep.LogLine(fmt.Sprintf("\n[REBOOT REQUIRED — %s]", itemName))
 	r.rep.LogLine("  Resume command: " + resumeCmd)
 	r.rep.LogLine("")
 
 	// Kick off the OS-level reboot countdown.
 	shutdownMsg := fmt.Sprintf("KtulueKit: %s requires restart. After reboot run: %s", itemName, resumeCmd)
-	// /r = restart, /t 30 = 30-second countdown, /c = comment shown in shutdown dialog
 	_ = exec.Command("shutdown", "/r", "/t", "30", "/c", shutdownMsg).Run()
 
 	// Block on stdin — if the user presses Enter we cancel the countdown.
@@ -283,6 +305,11 @@ func (r *Runner) promptReboot(itemName string, currentPhase int) {
 
 	// Cancel the scheduled reboot and continue the run.
 	_ = exec.Command("shutdown", "/a").Run()
+
+	// Remove the resume task — the user chose to continue without rebooting,
+	// so we don't want it firing at the next unrelated logon.
+	_ = scheduler.DeleteResumeTask()
+
 	fmt.Println("  Reboot cancelled. Continuing installation...")
 }
 
