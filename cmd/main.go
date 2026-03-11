@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	configPath         string
+	configPaths        []string
 	dryRun             bool
 	resumePhase        int
 	noDesktopShortcuts bool
@@ -34,7 +34,7 @@ Windows 11 software stack in dependency order across three tiers:
 		RunE: runInstall,
 	}
 
-	root.PersistentFlags().StringVarP(&configPath, "config", "c", "ktuluekit.json", "Path to config file")
+	root.PersistentFlags().StringArrayVarP(&configPaths, "config", "c", nil, "Path to config file (repeatable: --config base.json --config extras.json)")
 	root.PersistentFlags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be installed without doing it")
 	root.PersistentFlags().IntVar(&resumePhase, "resume-phase", 1, "Skip all phases before this number (for post-reboot resume)")
 	root.PersistentFlags().BoolVar(&noDesktopShortcuts, "no-desktop-shortcuts", false, "Automatically remove all desktop shortcuts created by installers (skips prompt)")
@@ -61,7 +61,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("ktuluekit must be run as Administrator\n  Right-click your terminal and select 'Run as administrator', then try again")
 	}
 
-	cfg, err := config.Load(configPath)
+	cfg, err := config.LoadAll(configPaths)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
@@ -82,7 +82,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
-	fmt.Printf("Config:  %s\n", configPath)
+	// Use the first config path for reporting, defaulting if empty
+	reportingPath := configPaths
+	if len(reportingPath) == 0 {
+		reportingPath = []string{"ktuluekit.json"}
+	}
+
+	fmt.Printf("Config:  %v\n", reportingPath)
 	fmt.Printf("Packages: %d winget  |  %d commands  |  %d extensions\n\n",
 		len(cfg.Packages), len(cfg.Commands), len(cfg.Extensions))
 
@@ -98,7 +104,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		shortcutMode = desktop.PromptMode()
 	}
 
-	r := runner.New(cfg, rep, s, dryRun, resumePhase, configPath, shortcutMode)
+	r := runner.New(cfg, rep, s, dryRun, resumePhase, reportingPath[0], shortcutMode)
 
 	runStart := time.Now()
 	r.Run()

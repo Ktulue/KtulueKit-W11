@@ -103,13 +103,13 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## Larger Feature Additions (150-500 lines)
 
-- [ ] **`status` subcommand** — `ktuluekit status` runs all check commands against the current machine and displays a table showing installed / missing / outdated for every item. No installs.
+- [x] **`status` subcommand** — `ktuluekit status` runs all check commands against the current machine and displays a table showing installed / missing / outdated for every item. No installs.
 
-- [ ] **Auto-resume via Scheduled Task** — After triggering a reboot, create a one-shot Windows Scheduled Task (`schtasks /create /sc onlogon /tn KtulueKit-Resume ...`) that runs the resume command at next logon. Delete the task after it runs. Zero-friction reboots.
+- [x] **Auto-resume via Scheduled Task** — After triggering a reboot, create a one-shot Windows Scheduled Task (`schtasks /create /sc onlogon /tn KtulueKit-Resume ...`) that runs the resume command at next logon. Delete the task after it runs. Zero-friction reboots.
 
 - [ ] **Unit tests** — Tests for pure functions: `classifyWingetExit`, `buildWingetArgs`, `validate`, `applyDefaults`, `dependenciesMet`, `isAlreadyInstalled`. No OS interaction needed. Catches regressions.
 
-- [ ] **Bootstrap script** — The README references `bootstrap.ps1` (Option A) but it doesn't exist. Create a PowerShell script that installs Go, builds the binary, and runs it. Solves the chicken-and-egg problem on a bare machine.
+- [x] **Bootstrap script** — `setup.ps1` installs Go via winget, builds the binary, and launches it with arg passthrough. README updated to reference it.
 
 - [ ] **Config from URL** — `ktuluekit --config https://raw.githubusercontent.com/.../ktuluekit.json` fetches and parses a remote config. Makes it trivial to share configs or pull yours on a fresh machine without cloning.
 
@@ -121,18 +121,21 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## Major Features (500+ lines / new packages)
 
-- [ ] **Web UI (Option 2)** — `ktuluekit --gui` serves a local web UI at `localhost:9876` and opens it in the default browser. Dark-mode HTML/CSS/JS frontend embedded in the binary via `go:embed`. Features:
-  - Checkbox grid grouped by phase, with select-all per phase
-  - Runs all check commands on page load to show current machine state (installed / missing / update available)
-  - Start Install / Dry Run buttons
-  - Real-time install progress via WebSocket (replaces stdout streaming)
-  - Summary view at the end with the same categorized breakdown as CLI
-  - Architecture: `internal/gui/` package with embedded `frontend/` directory. HTTP handlers call existing runner/installer functions. WebSocket replaces `fmt.Printf` for progress. The CLI path stays completely untouched.
+- [x] **Web UI / Desktop GUI** — Wails v2 + Svelte 4 desktop app (`ktuluekit-gui.exe`). Category accordion with checkboxes, profile presets, live progress feed, reboot dialog, summary screen.
 
-- [ ] **TUI (interactive terminal)** — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner. Lighter alternative to the web UI.
+- [ ] **TUI (interactive terminal)** *(nice-to-have — lower priority given the Wails GUI)* — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner.
 
-- [ ] **Profile system** — Named profiles in the config (`"profiles": {"dev": [...], "creative": [...], "gaming": [...]}`) with `--profile dev` flag. Selects a subset of packages without needing `--only`.
+- [x] **Profile system** — Named profiles in the config (`"profiles": [{"name": "Dev Only", "ids": [...]}]`) with profile presets in the GUI. CLI `--profile` flag still pending.
 
-- [ ] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Separates "everyone's base" from per-machine overrides.
+- [x] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Last-wins by ID/name. `LoadAll` in config package; `--config` is now a repeatable flag.
 
 - [ ] **Parallel installs** — Run independent packages within the same phase concurrently. Requires careful stdout multiplexing and state locking. Biggest risk: winget itself may not handle concurrent installs gracefully.
+
+- [ ] **Uninstall / desired-state enforcement** *(high scrutiny — destructive)* — `ktuluekit uninstall` or `--enforce` mode. Scans installed packages against the config/selection and removes anything marked as desired-absent. Key design constraints:
+  - Requires an explicit "desired absent" signal — "not selected" ≠ "uninstall." Needs a dedicated flag (`--enforce`) or per-item `"uninstall": true` field to avoid accidental removal.
+  - **Reverse-phase uninstall order** — uninstall in reverse phase order so dependents are removed before their dependencies.
+  - **Dependency warnings** — if item B depends on item A and only A is being uninstalled, warn the user before proceeding.
+  - **Separate GUI screen** — if the GUI detects already-installed programs that aren't in the selection, surface them in a dedicated "To Remove" review screen with per-item confirmation before any uninstall runs.
+  - Coverage limited to Tier 1 (winget uninstall) — Tier 2 commands and Tier 3 extensions have no clean automated uninstall path.
+  - Dry-run output showing full "would uninstall" list required before any destructive action.
+  - Per-item confirmation prompts in CLI mode.

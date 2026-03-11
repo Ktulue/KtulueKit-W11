@@ -21,7 +21,7 @@ const (
 )
 
 func runStatus(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load(configPath)
+	cfg, err := config.LoadAll(configPaths)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
