@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
 	"github.com/Ktulue/KtulueKit-W11/internal/detector"
@@ -215,8 +216,10 @@ func (r *Runner) runPackagesInPhase(phase int) {
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Installing: %s\n", r.itemIdx, r.totalItems, pkg.Name)
+		start := time.Now()
 		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount, r.cfg.Settings.UpgradeIfInstalled)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(pkg.ID)
@@ -307,8 +310,10 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			continue
 		}
 
+		start := time.Now()
 		res := installer.RunCommand(cmd, r.dryRun, r.cfg.Settings.RetryCount, r.state)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready || res.Status == reporter.StatusReboot {
 			r.state.MarkSucceeded(cmd.ID)
@@ -348,8 +353,10 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Extension: %s\n", r.itemIdx, r.totalItems, ext.Name)
+		start := time.Now()
 		res := installer.InstallExtension(ext, r.dryRun)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(ext.ID)
