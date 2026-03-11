@@ -724,17 +724,7 @@ Expected: runs exactly as before, shows package count.
 
 Expected: shows `--config` (repeatable) description.
 
-- [ ] **Step 6: Smoke test — `status` with two configs**
-
-```bash
-./ktuluekit status --config ktuluekit.json --config /tmp/extras-test.json 2>&1 | head -5
-```
-
-Expected: runs cleanly, shows status table with merged items. This verifies the persistent flag reaches `runStatus` correctly.
-
-- [ ] **Step 7: Smoke test — two configs (install path)**
-
-Create a minimal extras file, then test:
+- [ ] **Step 6: Create the extras test file (used in Steps 7 and 8)**
 
 ```bash
 cat > /tmp/extras-test.json << 'EOF'
@@ -745,12 +735,25 @@ cat > /tmp/extras-test.json << 'EOF'
   "packages": []
 }
 EOF
+```
+
+- [ ] **Step 7: Smoke test — `status` with two configs**
+
+```bash
+./ktuluekit status --config ktuluekit.json --config /tmp/extras-test.json 2>&1 | head -5
+```
+
+Expected: runs cleanly, shows status table with merged items. Verifies the persistent flag reaches `runStatus` correctly.
+
+- [ ] **Step 8: Smoke test — two configs (install path)**
+
+```bash
 ./ktuluekit --config ktuluekit.json --config /tmp/extras-test.json --dry-run 2>&1 | head -5
 ```
 
 Expected: runs cleanly, no errors.
 
-- [ ] **Step 8: Run all tests**
+- [ ] **Step 9: Run all tests**
 
 ```bash
 go test ./internal/... ./cmd/... 2>&1
@@ -758,14 +761,14 @@ go test ./internal/... ./cmd/... 2>&1
 
 Expected: all pass.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add cmd/main.go cmd/status.go
 git commit -m "feat(cli): make --config repeatable for multi-file merging"
 ```
 
-- [ ] **Step 10: Update TODO**
+- [ ] **Step 11: Update TODO**
 
 In `TODO.md`, mark the config merging item as done:
 
