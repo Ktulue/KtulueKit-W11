@@ -28,6 +28,9 @@ const (
 	colorReset  = "\033[0m"
 )
 
+// consecutiveFailThreshold is the number of back-to-back failures that triggers a pause.
+const consecutiveFailThreshold = 3
+
 // ProgressEvent is emitted by the runner to report GUI progress.
 // When OnProgress is nil (CLI mode), fmt.Printf is used instead.
 type ProgressEvent struct {
@@ -55,6 +58,9 @@ type Runner struct {
 	selectedIDs    map[string]bool      // nil = run all (CLI mode); set by SetSelectedIDs
 	onProgress     func(ProgressEvent)  // nil = print to stdout (CLI mode); set by SetOnProgress
 	rebootResponse chan bool             // nil = no reboot pending; set by SetRebootResponse
+	consecutiveFails int            // counts back-to-back StatusFailed or StatusSkipped results
+	pauseResponse    chan bool       // GUI mode: GUI sends true when user clicks "continue"
+	onPause          func()         // test hook: when non-nil, replaces both CLI and GUI pause behavior; production code leaves this nil
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
@@ -93,6 +99,19 @@ func (r *Runner) SetOnProgress(fn func(ProgressEvent)) {
 // is required in GUI mode. ConfirmReboot/CancelReboot send on this channel.
 func (r *Runner) SetRebootResponse(ch chan bool) {
 	r.rebootResponse = ch
+}
+
+// SetPauseResponse provides the channel the runner blocks on when a consecutive-failure
+// pause fires in GUI mode. The app sends true each time the user confirms "continue".
+// Unlike rebootResponse, this is NOT set to nil after use (pauses can occur multiple times).
+func (r *Runner) SetPauseResponse(ch chan bool) {
+	r.pauseResponse = ch
+}
+
+// SetOnPause wires a test hook that replaces the stdin block in promptConsecutiveFailures.
+// Production code leaves this nil. Tests set it to verify the counter fires correctly.
+func (r *Runner) SetOnPause(fn func()) {
+	r.onPause = fn
 }
 
 // countItemsFromPhase returns the total number of items across all tiers
@@ -296,6 +315,8 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			r.cleanupShortcuts(pkg.Name, desktopBefore)
 		}
 
+		r.trackResult(res.Status)
+
 		if pkg.RebootAfter && !r.dryRun && (res.Status == reporter.StatusInstalled || res.Status == reporter.StatusReboot) {
 			r.promptReboot(pkg.Name, phase)
 		}
@@ -380,6 +401,7 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			if r.onProgress != nil {
 				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "skipped", Detail: detail})
 			}
+			r.trackResult(reporter.StatusSkipped)
 			r.state.MarkFailed(cmd.ID)
 			continue
 		}
@@ -404,6 +426,8 @@ func (r *Runner) runCommandsInPhase(phase int) {
 				r.promptManualInstall(cmd.Name, cmd.OnFailurePrompt)
 			}
 		}
+
+		r.trackResult(res.Status)
 
 		if cmd.RebootAfter && !r.dryRun && res.Status != reporter.StatusFailed {
 			r.promptReboot(cmd.Name, phase)
@@ -455,6 +479,8 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(ext.ID)
 		}
+
+		r.trackResult(res.Status)
 	}
 }
 
@@ -475,6 +501,44 @@ func (r *Runner) dependenciesMet(deps []string) bool {
 		}
 	}
 	return true
+}
+
+// trackResult updates the consecutive-failure counter after a fresh install attempt.
+// StatusFailed and StatusSkipped increment the counter; on reaching consecutiveFailThreshold, the run pauses.
+// Any non-failure status resets the counter to 0.
+// State-aware skips (items already succeeded in a prior run) must NOT call trackResult.
+func (r *Runner) trackResult(status string) {
+	switch status {
+	case reporter.StatusFailed, reporter.StatusSkipped:
+		r.consecutiveFails++
+		if r.consecutiveFails >= consecutiveFailThreshold {
+			r.promptConsecutiveFailures()
+			r.consecutiveFails = 0
+		}
+	default:
+		r.consecutiveFails = 0
+	}
+}
+
+// promptConsecutiveFailures fires when 3 or more installs fail or are dependency-skipped
+// back-to-back. It pauses the run and asks the user to investigate before continuing.
+func (r *Runner) promptConsecutiveFailures() {
+	if r.onPause != nil {
+		r.onPause()
+		return
+	}
+	if r.pauseResponse != nil {
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, Status: "paused"})
+		}
+		<-r.pauseResponse
+		return
+	}
+	// CLI mode: block on stdin.
+	fmt.Printf("\n  %s⚠️  3 consecutive failures. Something may be wrong.%s\n", colorYellow, colorReset)
+	fmt.Printf("  ──────────────────────────────────────────────────\n")
+	fmt.Printf("  Press Enter to continue, or Ctrl+C to abort and investigate.\n")
+	bufio.NewReader(os.Stdin).ReadString('\n') //nolint:errcheck
 }
 
 // promptManualInstall prints fallback guidance when an install command fails,
