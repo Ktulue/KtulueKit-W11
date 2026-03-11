@@ -6,6 +6,10 @@ import "os"
 
 // isAdmin returns true if the current process has administrator privileges.
 func isAdmin() bool {
-	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
-	return err == nil
+	f, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err == nil {
+		f.Close()
+		return true
+	}
+	return false
 }

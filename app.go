@@ -11,6 +11,7 @@ import (
 	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/runner"
+	"github.com/Ktulue/KtulueKit-W11/internal/scheduler"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -132,6 +133,9 @@ func (a *App) StartInstall(ids []string) string {
 			a.mu.Unlock()
 		}()
 
+		// Clean up any stale resume task from a previous CLI reboot run.
+		_ = scheduler.DeleteResumeTask()
+
 		cfg, err := config.Load(a.configPath)
 		if err != nil {
 			runtime.EventsEmit(a.ctx, "complete", SummaryResult{
@@ -170,6 +174,11 @@ func (a *App) StartInstall(ids []string) string {
 		runStart := time.Now()
 		r.Run()
 		elapsed := time.Since(runStart).Round(time.Second).String()
+
+		// Mirror CLI behaviour: clear succeeded state only on a fully clean run.
+		if !rep.HasFailures() {
+			_ = state.Clear()
+		}
 
 		summary := SummaryResult{
 			Installed:        rep.NamesBy("installed"),

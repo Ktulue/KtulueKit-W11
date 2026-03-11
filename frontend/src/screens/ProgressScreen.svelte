@@ -1,13 +1,20 @@
 <script>
+  import { afterUpdate } from 'svelte'
   import ProgressItem from '../components/ProgressItem.svelte'
   import { ConfirmReboot, CancelReboot } from '../../wailsjs/go/main/App'
 
   export let events = []
 
+  let feedEl
+
   $: rebootEvent = events.find(e => e.Status === 'reboot' && !events.find(f => f.Status === 'reboot_cancelled'))
   $: latestIndex = events.filter(e => e.Index > 0).reduce((max, e) => Math.max(max, e.Index), 0)
   $: total = events.length > 0 ? events[events.length - 1].Total || 0 : 0
   $: progress = total > 0 ? Math.round((latestIndex / total) * 100) : 0
+
+  afterUpdate(() => {
+    if (feedEl) feedEl.scrollTop = feedEl.scrollHeight
+  })
 </script>
 
 <div class="screen">
@@ -19,7 +26,7 @@
     <span class="progress-label">{latestIndex}/{total}</span>
   </header>
 
-  <div class="feed" id="feed">
+  <div class="feed" bind:this={feedEl}>
     {#each events as event, i (i)}
       <ProgressItem {event} />
     {/each}
