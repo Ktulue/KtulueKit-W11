@@ -123,7 +123,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Web UI / Desktop GUI** — Wails v2 + Svelte 4 desktop app (`ktuluekit-gui.exe`). Category accordion with checkboxes, profile presets, live progress feed, reboot dialog, summary screen.
 
-- [ ] **TUI (interactive terminal)** — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner. Lighter alternative to the web UI.
+- [ ] **TUI (interactive terminal)** *(nice-to-have — lower priority given the Wails GUI)* — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner.
 
 - [x] **Profile system** — Named profiles in the config (`"profiles": [{"name": "Dev Only", "ids": [...]}]`) with profile presets in the GUI. CLI `--profile` flag still pending.
 
