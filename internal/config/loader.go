@@ -14,7 +14,8 @@ func Load(path string) (*Config, error) {
 
 // LoadAll merges one or more config files left-to-right and returns the combined Config.
 // Later files override earlier files on ID/name collision (last-wins).
-// validate() and applyDefaults() are called exactly once on the merged result.
+// applyDefaults() is called on the merged result.
+// Validation is NOT performed — callers must call Validate() explicitly after LoadAll.
 // If paths is empty, it defaults to ["ktuluekit.json"].
 func LoadAll(paths []string) (*Config, error) {
 	if len(paths) == 0 {
@@ -35,10 +36,6 @@ func LoadAll(paths []string) (*Config, error) {
 		}
 
 		mergeInto(&merged, &cfg)
-	}
-
-	if err := validate(&merged); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
 	applyDefaults(&merged)
@@ -174,80 +171,6 @@ func mergeProfiles(base, src []Profile) []Profile {
 		}
 	}
 	return result
-}
-
-// validate checks required fields and catches obvious mistakes.
-func validate(cfg *Config) error {
-	if cfg.Version == "" {
-		return fmt.Errorf("missing required field: version")
-	}
-	if cfg.Metadata.Name == "" {
-		return fmt.Errorf("missing required field: metadata.name")
-	}
-
-	ids := make(map[string]bool)
-
-	for i, p := range cfg.Packages {
-		if p.ID == "" {
-			return fmt.Errorf("packages[%d]: missing required field 'id'", i)
-		}
-		if p.Name == "" {
-			return fmt.Errorf("packages[%d] (%s): missing required field 'name'", i, p.ID)
-		}
-		if p.Phase < 1 {
-			return fmt.Errorf("packages[%d] (%s): phase must be >= 1", i, p.ID)
-		}
-		if ids[p.ID] {
-			return fmt.Errorf("packages[%d]: duplicate id %q", i, p.ID)
-		}
-		ids[p.ID] = true
-	}
-
-	for i, c := range cfg.Commands {
-		if c.ID == "" {
-			return fmt.Errorf("commands[%d]: missing required field 'id'", i)
-		}
-		if c.Name == "" {
-			return fmt.Errorf("commands[%d] (%s): missing required field 'name'", i, c.ID)
-		}
-		if c.Phase < 1 {
-			return fmt.Errorf("commands[%d] (%s): phase must be >= 1", i, c.ID)
-		}
-		if c.Check == "" {
-			return fmt.Errorf("commands[%d] (%s): missing required field 'check'", i, c.ID)
-		}
-		if c.Cmd == "" {
-			return fmt.Errorf("commands[%d] (%s): missing required field 'command'", i, c.ID)
-		}
-		if ids[c.ID] {
-			return fmt.Errorf("commands[%d]: duplicate id %q", i, c.ID)
-		}
-		ids[c.ID] = true
-	}
-
-	for i, e := range cfg.Extensions {
-		if e.ID == "" {
-			return fmt.Errorf("extensions[%d]: missing required field 'id'", i)
-		}
-		if e.Name == "" {
-			return fmt.Errorf("extensions[%d] (%s): missing required field 'name'", i, e.ID)
-		}
-		if e.Phase < 1 {
-			return fmt.Errorf("extensions[%d] (%s): phase must be >= 1", i, e.ID)
-		}
-		if e.ExtensionID == "" {
-			return fmt.Errorf("extensions[%d] (%s): missing required field 'extension_id'", i, e.ID)
-		}
-		if len(e.ExtensionID) != 32 {
-			return fmt.Errorf("extensions[%d] (%s): extension_id must be 32 characters", i, e.ID)
-		}
-		if ids[e.ID] {
-			return fmt.Errorf("extensions[%d]: duplicate id %q", i, e.ID)
-		}
-		ids[e.ID] = true
-	}
-
-	return nil
 }
 
 // applyDefaults fills in zero-value fields from settings.

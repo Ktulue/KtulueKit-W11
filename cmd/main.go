@@ -67,6 +67,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
+	if errs := config.Validate(cfg); len(errs) > 0 {
+		return fmt.Errorf("config validation failed: %w", errs[0])
+	}
 	if noUpgrade {
 		cfg.Settings.UpgradeIfInstalled = false
 	}
