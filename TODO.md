@@ -67,13 +67,13 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [ ] **Internet connectivity check** — Quick DNS or HTTP check before starting installs. Could piggyback on `winget source update` (if it fails, no internet).
 
-- [ ] **State-aware pre-check skip** — If `state.Succeeded["Git.Git"]` is true from a previous run, skip even the pre-check command on resume. Saves 40+ `winget list` calls when resuming after phase 4.
+- [x] **State-aware pre-check skip** — If `state.Succeeded["Git.Git"]` is true from a previous run, skip even the pre-check command on resume. Saves 40+ `winget list` calls when resuming after phase 4.
 
 - [ ] **Backup shortcuts instead of deleting** — Move `.lnk` files to `$DESKTOP/.ktuluekit-shortcuts-backup/` instead of permanent deletion. Reversible.
 
 - [ ] **`--no-upgrade` flag** — Override `upgrade_if_installed: true` from the config via CLI. For quick "just install missing stuff" runs.
 
-- [ ] **Color output (ANSI)** — Add ANSI color codes alongside emoji. Green for success, red for failure, yellow for warnings. Makes scanning long output much faster.
+- [x] **Color output (ANSI)** — Add ANSI color codes alongside emoji. Green for success, red for failure, yellow for warnings. Makes scanning long output much faster.
 
 ---
 
