@@ -48,6 +48,20 @@ Windows 11 software stack in dependency order across three tiers:
 	}
 	root.AddCommand(statusCmd)
 
+	validateCmd := &cobra.Command{
+		Use:   "validate",
+		Short: "Validate config file(s) and report all errors",
+		RunE:  runValidate,
+	}
+	root.AddCommand(validateCmd)
+
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all configured items grouped by phase and tier",
+		RunE:  runList,
+	}
+	root.AddCommand(listCmd)
+
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
