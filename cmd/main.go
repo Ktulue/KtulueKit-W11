@@ -10,6 +10,7 @@ import (
 	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/runner"
+	"github.com/Ktulue/KtulueKit-W11/internal/scheduler"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
 )
 
@@ -44,6 +45,10 @@ Windows 11 software stack in dependency order across three tiers:
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
+	// Always delete the resume task first — cleans up after a previous reboot run.
+	// No-op (and error ignored) if the task doesn't exist.
+	_ = scheduler.DeleteResumeTask()
+
 	if !dryRun && !isAdmin() {
 		return fmt.Errorf("ktuluekit must be run as Administrator\n  Right-click your terminal and select 'Run as administrator', then try again")
 	}
