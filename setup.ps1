@@ -78,6 +78,9 @@ Write-Step "Checking for Go..."
 $goCmd = Get-Command go -ErrorAction SilentlyContinue
 if ($goCmd) {
     $goVersion = & go version
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail "Go found on PATH but 'go version' failed. The installation may be corrupted. Try reinstalling Go manually."
+    }
     Write-Success "Go already installed: $goVersion"
 } else {
     Write-Step "Go not found. Installing via winget..."
@@ -92,7 +95,9 @@ if ($goCmd) {
         Write-Fail "winget failed to install Go (exit code $LASTEXITCODE). Check the output above."
     }
 
-    # Refresh PATH in the current session so 'go' is immediately available.
+    # Rebuild PATH from registry (Machine + User). Note: this replaces any session-local
+    # PATH entries added by the current shell, but winget writes to Machine PATH so Go
+    # will be available after this.
     Write-Step "Refreshing PATH..."
     $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
     $userPath    = [System.Environment]::GetEnvironmentVariable("Path", "User")
@@ -105,6 +110,9 @@ if ($goCmd) {
     }
 
     $goVersion = & go version
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail "Go was installed but 'go version' failed. Try closing and reopening the terminal."
+    }
     Write-Success "Go installed: $goVersion"
 }
 
