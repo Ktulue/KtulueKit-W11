@@ -103,6 +103,11 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	if r.dryRun {
 		return false
 	}
+	// Skip the pre-run summary on resume runs — phases before resumePhase are
+	// already done, and scanning all phases would give misleading counts.
+	if r.resumePhase > 1 {
+		return false
+	}
 
 	fmt.Println("Scanning machine...")
 	items := detector.FlattenItems(r.cfg)
@@ -126,8 +131,10 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	fmt.Printf("  %s[?]%s       Unknown:           %d\n", colorYellow, colorReset, unknown)
 	fmt.Println()
 
-	if missing == 0 && unknown == 0 {
-		fmt.Println("Nothing to install. Everything is already present.")
+	// Unknown items (extensions without check commands) are not counted as "needs install"
+	// — they will be handled during the install loop. Only Missing items block early exit.
+	if missing == 0 {
+		fmt.Println("Nothing to install. All known items are already present.")
 		return true
 	}
 
@@ -275,6 +282,19 @@ func (r *Runner) runCommandsInPhase(phase int) {
 func (r *Runner) runExtensionsInPhase(phase int) {
 	for _, ext := range r.cfg.Extensions {
 		if ext.Phase != phase {
+			continue
+		}
+
+		// State-aware skip: if a previous run already succeeded, don't re-install.
+		if r.state.Succeeded[ext.ID] {
+			fmt.Printf("\n  Skipping (already succeeded): %s\n", ext.Name)
+			r.rep.Add(reporter.Result{
+				ID:     ext.ID,
+				Name:   ext.Name,
+				Tier:   "extension",
+				Status: reporter.StatusAlready,
+				Detail: "already succeeded in a previous run",
+			})
 			continue
 		}
 
