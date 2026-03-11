@@ -130,3 +130,12 @@ Organized from least extensive to most extensive changes. Each section groups it
 - [ ] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Separates "everyone's base" from per-machine overrides.
 
 - [ ] **Parallel installs** — Run independent packages within the same phase concurrently. Requires careful stdout multiplexing and state locking. Biggest risk: winget itself may not handle concurrent installs gracefully.
+
+- [ ] **Uninstall / desired-state enforcement** *(high scrutiny — destructive)* — `ktuluekit uninstall` or `--enforce` mode. Scans installed packages against the config/selection and removes anything marked as desired-absent. Key design constraints:
+  - Requires an explicit "desired absent" signal — "not selected" ≠ "uninstall." Needs a dedicated flag (`--enforce`) or per-item `"uninstall": true` field to avoid accidental removal.
+  - **Reverse-phase uninstall order** — uninstall in reverse phase order so dependents are removed before their dependencies.
+  - **Dependency warnings** — if item B depends on item A and only A is being uninstalled, warn the user before proceeding.
+  - **Separate GUI screen** — if the GUI detects already-installed programs that aren't in the selection, surface them in a dedicated "To Remove" review screen with per-item confirmation before any uninstall runs.
+  - Coverage limited to Tier 1 (winget uninstall) — Tier 2 commands and Tier 3 extensions have no clean automated uninstall path.
+  - Dry-run output showing full "would uninstall" list required before any destructive action.
+  - Per-item confirmation prompts in CLI mode.
