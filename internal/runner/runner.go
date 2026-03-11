@@ -193,6 +193,11 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	if r.resumePhase > 1 {
 		return false
 	}
+	// Skip in GUI mode — the selection screen already shows item counts, and
+	// detector results would not reflect the user's selection filter.
+	if r.onProgress != nil {
+		return false
+	}
 
 	fmt.Println("Scanning machine...")
 	items := detector.FlattenItems(r.cfg)
@@ -232,6 +237,9 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 func (r *Runner) runPackagesInPhase(phase int) {
 	for _, pkg := range r.cfg.Packages {
 		if pkg.Phase != phase {
+			continue
+		}
+		if r.selectedIDs != nil && !r.selectedIDs[pkg.ID] {
 			continue
 		}
 
@@ -320,6 +328,9 @@ func (r *Runner) runCommandsInPhase(phase int) {
 		if cmd.Phase != phase {
 			continue
 		}
+		if r.selectedIDs != nil && !r.selectedIDs[cmd.ID] {
+			continue
+		}
 
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-run.
 		if r.state.Succeeded[cmd.ID] {
@@ -377,6 +388,9 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 		if ext.Phase != phase {
 			continue
 		}
+		if r.selectedIDs != nil && !r.selectedIDs[ext.ID] {
+			continue
+		}
 
 		// State-aware skip: if a previous run already succeeded, don't re-install.
 		if r.state.Succeeded[ext.ID] {
@@ -426,6 +440,18 @@ func (r *Runner) dependenciesMet(deps []string) bool {
 // promptManualInstall prints fallback guidance when an install command fails,
 // then pauses so the user can read it before the run continues.
 func (r *Runner) promptManualInstall(itemName, guidance string) {
+	if r.onProgress != nil {
+		// GUI mode: emit the guidance text as a failed event detail so the
+		// frontend can render it in the Raw Output drawer. No stdin block.
+		r.onProgress(ProgressEvent{
+			Index:  r.itemIdx,
+			Total:  r.totalItems,
+			Name:   itemName,
+			Status: "failed",
+			Detail: guidance,
+		})
+		return
+	}
 	fmt.Printf("\n  ⚠️  %s failed to install automatically.\n", itemName)
 	fmt.Println("  ──────────────────────────────────────────────────")
 	fmt.Println("  Manual install instructions:")
