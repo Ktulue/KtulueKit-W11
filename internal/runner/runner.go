@@ -254,6 +254,9 @@ func (r *Runner) runPackagesInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
@@ -265,10 +268,17 @@ func (r *Runner) runPackagesInPhase(phase int) {
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Installing: %s\n", r.itemIdx, r.totalItems, pkg.Name)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount, r.cfg.Settings.UpgradeIfInstalled)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(pkg.ID)
@@ -343,6 +353,9 @@ func (r *Runner) runCommandsInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
@@ -350,22 +363,33 @@ func (r *Runner) runCommandsInPhase(phase int) {
 		fmt.Printf("\n  [%d/%d] Running: %s\n", r.itemIdx, r.totalItems, cmd.Name)
 
 		if !r.dependenciesMet(cmd.DependsOn) {
+			detail := fmt.Sprintf("dependency not met: %s", strings.Join(cmd.DependsOn, ", "))
 			res := reporter.Result{
 				ID:     cmd.ID,
 				Name:   cmd.Name,
 				Tier:   "command",
 				Status: reporter.StatusSkipped,
-				Detail: fmt.Sprintf("dependency not met: %s", strings.Join(cmd.DependsOn, ", ")),
+				Detail: detail,
 			}
 			r.rep.Add(res)
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "skipped", Detail: detail})
+			}
 			r.state.MarkFailed(cmd.ID)
 			continue
 		}
 
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.RunCommand(cmd, r.dryRun, r.cfg.Settings.RetryCount, r.state)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready || res.Status == reporter.StatusReboot {
 			r.state.MarkSucceeded(cmd.ID)
@@ -403,15 +427,25 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Extension: %s\n", r.itemIdx, r.totalItems, ext.Name)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.InstallExtension(ext, r.dryRun)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(ext.ID)
@@ -571,4 +605,17 @@ func (r *Runner) firstCommandPhase() int {
 		}
 	}
 	return min
+}
+
+// reporterStatusToGUI converts a reporter.Status* constant to the GUI event status string.
+// Most constants match already; only two differ.
+func reporterStatusToGUI(s string) string {
+	switch s {
+	case reporter.StatusAlready:
+		return "already"
+	case reporter.StatusReboot:
+		return "reboot"
+	default:
+		return s
+	}
 }
