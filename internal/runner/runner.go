@@ -37,7 +37,7 @@ type ProgressEvent struct {
 	Name    string // item display name
 	Status  string // "installing"|"installed"|"upgraded"|"already"|"failed"|"skipped"|"reboot"|"reboot_cancelled"|"shortcut_removed"
 	Detail  string // raw output line, error message, or OnFailurePrompt text
-	Elapsed string // "1m 23s" — empty for "installing" events
+	Elapsed string // "1m23s" — empty for "installing" events
 }
 
 // Runner orchestrates the full install sequence.
