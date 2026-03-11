@@ -127,7 +127,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Profile system** — Named profiles in the config (`"profiles": [{"name": "Dev Only", "ids": [...]}]`) with profile presets in the GUI. CLI `--profile` flag still pending.
 
-- [ ] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Separates "everyone's base" from per-machine overrides.
+- [x] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Last-wins by ID/name. `LoadAll` in config package; `--config` is now a repeatable flag.
 
 - [ ] **Parallel installs** — Run independent packages within the same phase concurrently. Requires careful stdout multiplexing and state locking. Biggest risk: winget itself may not handle concurrent installs gracefully.
 
