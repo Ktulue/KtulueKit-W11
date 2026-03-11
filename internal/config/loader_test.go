@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -225,6 +226,9 @@ func TestLoadAll_MissingFile(t *testing.T) {
 	_, err := LoadAll([]string{base, missing})
 	if err == nil {
 		t.Fatal("expected error for missing file, got nil")
+	}
+	if !strings.Contains(err.Error(), missing) {
+		t.Errorf("error %q does not mention missing path %q", err.Error(), missing)
 	}
 }
 
