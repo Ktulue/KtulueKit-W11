@@ -2,6 +2,7 @@ package detector
 
 import (
 	"context"
+	"io"
 	"os/exec"
 	"time"
 
@@ -92,6 +93,8 @@ func CheckItem(item Item, s *state.State) Result {
 	}
 
 	// No check command available.
+	// Note: "echo skip" maps to Unknown (cannot tell), not Missing — intentionally
+	// different from installer.isAlreadyInstalled which returns false for "echo skip".
 	if item.CheckCmd == "" || item.CheckCmd == "echo skip" {
 		return Result{Item: item, Status: StatusUnknown}
 	}
@@ -119,6 +122,8 @@ func runCheckSilent(checkCmd string) bool {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "cmd", "/C", checkCmd)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
 	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
