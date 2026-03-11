@@ -242,7 +242,7 @@ func TestLoadAll_InvalidJSON(t *testing.T) {
 	}
 }
 
-// TestLoadAll_CrossTierIDCollision Package ID in one file matches Command ID in another — validation must catch it.
+// TestLoadAll_CrossTierIDCollision Package ID in one file matches Command ID in another — Validate must catch it.
 func TestLoadAll_CrossTierIDCollision(t *testing.T) {
 	base := writeJSON(t, `{
 		"version": "1.0",
@@ -254,9 +254,13 @@ func TestLoadAll_CrossTierIDCollision(t *testing.T) {
 		"metadata": {"name": "Extras"},
 		"commands": [{"id": "foo", "name": "Foo Command", "phase": 2, "check": "foo -v", "command": "install foo"}]
 	}`)
-	_, err := LoadAll([]string{base, extras})
-	if err == nil {
-		t.Fatal("expected error for cross-tier ID collision (Package 'foo' vs Command 'foo'), got nil")
+	cfg, err := LoadAll([]string{base, extras})
+	if err != nil {
+		t.Fatalf("LoadAll should not validate: unexpected error %v", err)
+	}
+	errs := Validate(cfg)
+	if len(errs) == 0 {
+		t.Fatal("expected Validate to catch cross-tier ID collision, got no errors")
 	}
 }
 

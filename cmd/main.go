@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,6 +22,8 @@ var (
 	resumePhase        int
 	noDesktopShortcuts bool
 	noUpgrade          bool
+	onlyIDs            string
+	excludeIDs         string
 )
 
 func main() {
@@ -40,6 +43,8 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().IntVar(&resumePhase, "resume-phase", 1, "Skip all phases before this number (for post-reboot resume)")
 	root.PersistentFlags().BoolVar(&noDesktopShortcuts, "no-desktop-shortcuts", false, "Automatically remove all desktop shortcuts created by installers (skips prompt)")
 	root.PersistentFlags().BoolVar(&noUpgrade, "no-upgrade", false, "Skip upgrades for already-installed packages even if upgrade_if_installed is set in config")
+	root.PersistentFlags().StringVar(&onlyIDs, "only", "", "comma-separated IDs to install (skip all others)")
+	root.PersistentFlags().StringVar(&excludeIDs, "exclude", "", "comma-separated IDs to exclude from install")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -47,6 +52,20 @@ Windows 11 software stack in dependency order across three tiers:
 		RunE:  runStatus,
 	}
 	root.AddCommand(statusCmd)
+
+	validateCmd := &cobra.Command{
+		Use:   "validate",
+		Short: "Validate config file(s) and report all errors",
+		RunE:  runValidate,
+	}
+	root.AddCommand(validateCmd)
+
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all configured items grouped by phase and tier",
+		RunE:  runList,
+	}
+	root.AddCommand(listCmd)
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -67,8 +86,15 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
+	if errs := config.Validate(cfg); len(errs) > 0 {
+		return fmt.Errorf("config validation failed: %w", errs[0])
+	}
 	if noUpgrade {
 		cfg.Settings.UpgradeIfInstalled = false
+	}
+
+	if err := filterFlagsError(onlyIDs, excludeIDs); err != nil {
+		return err
 	}
 
 	rep, err := reporter.New(cfg.Settings.LogDir)
@@ -111,6 +137,20 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	r := runner.New(cfg, rep, s, dryRun, resumePhase, reportingPath[0], shortcutMode)
 
+	if onlyIDs != "" {
+		selected, unknowns := buildOnlySet(onlyIDs, allConfigIDs(cfg))
+		for _, id := range unknowns {
+			fmt.Printf("%sWARN%s  unknown ID in --only: %q\n", colorYellow, colorReset, id)
+		}
+		r.SetSelectedIDs(selected)
+	} else if excludeIDs != "" {
+		remaining, unknowns := buildExcludeSet(excludeIDs, allConfigIDs(cfg))
+		for _, id := range unknowns {
+			fmt.Printf("%sWARN%s  unknown ID in --exclude: %q\n", colorYellow, colorReset, id)
+		}
+		r.SetSelectedIDs(remaining)
+	}
+
 	runStart := time.Now()
 	r.Run()
 
@@ -124,4 +164,64 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// buildOnlySet parses a comma-separated raw string and returns (selected, unknowns).
+// IDs absent from known are appended to unknowns but still added to selected.
+func buildOnlySet(raw string, known map[string]bool) (selected map[string]bool, unknowns []string) {
+	selected = make(map[string]bool)
+	for _, id := range strings.Split(raw, ",") {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if !known[id] {
+			unknowns = append(unknowns, id)
+		}
+		selected[id] = true
+	}
+	return selected, unknowns
+}
+
+// buildExcludeSet starts with all known IDs and removes those in raw.
+// IDs absent from all are appended to unknowns; the delete is a no-op.
+func buildExcludeSet(raw string, all map[string]bool) (remaining map[string]bool, unknowns []string) {
+	remaining = make(map[string]bool, len(all))
+	for id := range all {
+		remaining[id] = true
+	}
+	for _, id := range strings.Split(raw, ",") {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if !all[id] {
+			unknowns = append(unknowns, id)
+		}
+		delete(remaining, id)
+	}
+	return remaining, unknowns
+}
+
+// filterFlagsError returns an error if --only and --exclude are both set.
+func filterFlagsError(only, exclude string) error {
+	if only != "" && exclude != "" {
+		return fmt.Errorf("--only and --exclude are mutually exclusive")
+	}
+	return nil
+}
+
+// allConfigIDs returns a set of all item IDs declared across all three tiers.
+func allConfigIDs(cfg *config.Config) map[string]bool {
+	ids := make(map[string]bool)
+	for _, p := range cfg.Packages {
+		ids[p.ID] = true
+	}
+	for _, c := range cfg.Commands {
+		ids[c.ID] = true
+	}
+	for _, e := range cfg.Extensions {
+		ids[e.ID] = true
+	}
+	return ids
 }
