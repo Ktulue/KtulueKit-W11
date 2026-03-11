@@ -161,6 +161,16 @@ func (r *Reporter) filterBy(status string) []Result {
 	return out
 }
 
+// NamesBy returns the Name field of all results with the given status.
+func (r *Reporter) NamesBy(status string) []string {
+	items := r.filterBy(status)
+	names := make([]string, len(items))
+	for i, res := range items {
+		names[i] = res.Name
+	}
+	return names
+}
+
 func statusIcon(status string) string {
 	switch status {
 	case StatusInstalled:
