@@ -14,14 +14,15 @@ Allow multiple config files to be layered together via repeated `--config` flags
 
 ### CLI Change
 
-`--config` changes from `StringVarP` (single string) to `StringArrayVarP` (repeatable flag).
+`--config` changes from `StringVarP` (single string) to `StringArrayVarP` (repeatable flag). It is a `PersistentFlag` on the root command, so all subcommands (`status`, `validate`, etc.) automatically receive the full list.
 
 ```
 ktuluekit --config base.json --config machine.json
 ktuluekit -c base.json -c machine.json
+ktuluekit status --config base.json --config machine.json
 ```
 
-Single-flag usage continues to work identically (`--config ktuluekit.json`). Default remains `ktuluekit.json` when no flag is provided.
+Single-flag usage continues to work identically. Default remains `["ktuluekit.json"]` when no flag is provided.
 
 ### New Function: `config.LoadAll(paths []string)`
 
@@ -29,56 +30,63 @@ Single-flag usage continues to work identically (`--config ktuluekit.json`). Def
 func LoadAll(paths []string) (*Config, error)
 ```
 
-- Loads each file in order
-- Merges left-to-right (later configs override earlier)
-- Runs existing `validate()` and `applyDefaults()` on the merged result
+- Reads each file as raw JSON (hard error on missing file or invalid JSON)
+- Individual files are **not** required to be complete configs — only the merged result must pass validation
+- Merges left-to-right (later configs override earlier) using the semantics below
+- Runs `validate()` and `applyDefaults()` **exactly once** on the merged result
 - Returns a single `*Config` ready for use
 
-`Load(path string)` becomes a thin wrapper around `LoadAll([]string{path})` — all existing call sites unchanged.
+`Load(path string)` becomes a thin wrapper: `return LoadAll([]string{path})`. It must **not** call `validate()` or `applyDefaults()` independently — these run only inside `LoadAll` on the final merged result.
 
 ### Merge Semantics (last-wins per field/ID)
 
-**Settings** — later config fields overwrite earlier fields only where the value is non-zero. A field absent (or zero-valued) in `extras.json` leaves the base config value intact.
+**Settings** — each Settings field is merged independently. A non-zero/non-empty value in a later config overwrites the earlier value. A zero or empty value in a later config is indistinguishable from an absent field and leaves the earlier value intact. **Intentional clearing (setting a field back to zero/empty via extras.json) is not supported.**
 
-**Packages / Commands / Extensions** — merged into an ordered map keyed by `ID`. Later configs overwrite same-ID entries. Final slice order: first-seen position is preserved; an override replaces in-place (does not move to end).
+**Packages / Commands / Extensions** — three separate ordered maps keyed by `ID`. Overrides are same-tier only: a Package ID in extras cannot override a Command ID in base, and vice versa. Override preserves the first-seen position in the slice (the later config's data replaces the entry in-place, not at the end). Items with new IDs are appended after all base items.
 
-**Profiles** — merged by `Name` (last-wins on name collision). Combined list is available in both CLI dry-run output and GUI profile dropdown.
+**Profiles** — merged by `Name` (last-wins on name collision). Combined list appended in order.
 
-**Metadata** — first config is authoritative. Later configs' metadata is ignored.
+**Metadata** — first config's metadata is authoritative. Later configs' metadata fields are ignored.
+
+**Schema/Version** — first config's values are used. Later configs' schema/version fields are ignored.
 
 ### Error Cases
 
 | Condition | Behaviour |
 |---|---|
-| No `--config` flags | Use default `ktuluekit.json` |
-| File not found | Hard error: "config file not found: extras.json" |
-| Duplicate ID across configs | Last-wins (no error) |
+| No `--config` flags | Use default `["ktuluekit.json"]` |
+| File not found | Hard error naming the missing file |
 | Invalid JSON in any file | Hard error before merge begins |
-| Merged result fails validation | Hard error with field-level message |
+| Cross-tier ID collision (Package ID same as Command ID, across any files) | Caught by `validate()` on merged result — hard error |
+| Merged result fails validation (missing required fields, bad values) | Hard error with field-level message |
+| Duplicate ID within the same tier across files | Last-wins (no error) |
 
 ## File Structure
 
 | File | Change |
 |---|---|
-| `internal/config/loader.go` | Add `LoadAll()`, refactor `Load()` to call it |
-| `cmd/main.go` | Change `StringVarP` → `StringArrayVarP`; pass slice to `LoadAll` |
-| `internal/config/loader_test.go` | New file: tests for merge behaviour |
+| `internal/config/loader.go` | Add `LoadAll()`, refactor `Load()` to thin wrapper |
+| `internal/config/loader_test.go` | New file: merge behaviour tests |
+| `cmd/main.go` | `StringVarP` → `StringArrayVarP`; pass slice to `LoadAll` |
+| `cmd/status.go` | Update `runStatus` to call `LoadAll` with config slice (receives it via persistent flag) |
 
-No other files change. Runner, reporter, installer, GUI, and status subcommand all consume `*Config` — the merge is transparent to them.
+No other files change. Runner, reporter, installer, and GUI all consume `*Config` — the merge is transparent to them.
 
 ## Testing
 
-- Single path: identical output to current `Load()`
-- Two configs, no overlap: all items from both present in correct order
-- Two configs, overlapping ID: later config's version wins
-- Two configs, overlapping Settings field: later config's value wins; unset fields preserve base value
-- Two configs, overlapping Profile name: later config's profile wins
-- Missing file: returns error naming the missing path
-- Invalid JSON in second file: returns error before any merge
-- Merged result with duplicate ID introduced by bad extras: validated and caught
+- Single path: output identical to current `Load()`
+- Two configs, no overlap: all items from both present in original order
+- Two configs, Package ID overlap: later config's Package version wins, position preserved
+- Two configs, Settings field overlap: later config's non-zero value wins; zero value in extras leaves base value
+- Two configs, Profile name overlap: later config's profile definition wins
+- Two configs, cross-tier ID collision (Package vs Command): merged result fails validation, error returned
+- Three configs, middle config overridden by third: final value is from third config
+- Missing file in list: error names the specific missing path
+- Invalid JSON in second file: error before any merge occurs
+- `status` subcommand with two `--config` flags: receives merged config correctly
 
 ## Out of Scope
 
 - Config from URL (`--config https://...`) — separate feature
-- More than two configs (supported naturally by the slice approach, no special casing needed)
-- Merge strategy flags (`--merge-strategy`) — last-wins is sufficient for the stated use case
+- Intentional field clearing via extras (zero/empty overwrites base) — not supported; not needed for the base+override use case
+- Merge strategy flags — last-wins is sufficient
