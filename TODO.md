@@ -103,9 +103,9 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## Larger Feature Additions (150-500 lines)
 
-- [ ] **`status` subcommand** — `ktuluekit status` runs all check commands against the current machine and displays a table showing installed / missing / outdated for every item. No installs.
+- [x] **`status` subcommand** — `ktuluekit status` runs all check commands against the current machine and displays a table showing installed / missing / outdated for every item. No installs.
 
-- [ ] **Auto-resume via Scheduled Task** — After triggering a reboot, create a one-shot Windows Scheduled Task (`schtasks /create /sc onlogon /tn KtulueKit-Resume ...`) that runs the resume command at next logon. Delete the task after it runs. Zero-friction reboots.
+- [x] **Auto-resume via Scheduled Task** — After triggering a reboot, create a one-shot Windows Scheduled Task (`schtasks /create /sc onlogon /tn KtulueKit-Resume ...`) that runs the resume command at next logon. Delete the task after it runs. Zero-friction reboots.
 
 - [ ] **Unit tests** — Tests for pure functions: `classifyWingetExit`, `buildWingetArgs`, `validate`, `applyDefaults`, `dependenciesMet`, `isAlreadyInstalled`. No OS interaction needed. Catches regressions.
 
@@ -121,17 +121,11 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## Major Features (500+ lines / new packages)
 
-- [ ] **Web UI (Option 2)** — `ktuluekit --gui` serves a local web UI at `localhost:9876` and opens it in the default browser. Dark-mode HTML/CSS/JS frontend embedded in the binary via `go:embed`. Features:
-  - Checkbox grid grouped by phase, with select-all per phase
-  - Runs all check commands on page load to show current machine state (installed / missing / update available)
-  - Start Install / Dry Run buttons
-  - Real-time install progress via WebSocket (replaces stdout streaming)
-  - Summary view at the end with the same categorized breakdown as CLI
-  - Architecture: `internal/gui/` package with embedded `frontend/` directory. HTTP handlers call existing runner/installer functions. WebSocket replaces `fmt.Printf` for progress. The CLI path stays completely untouched.
+- [x] **Web UI / Desktop GUI** — Wails v2 + Svelte 4 desktop app (`ktuluekit-gui.exe`). Category accordion with checkboxes, profile presets, live progress feed, reboot dialog, summary screen.
 
 - [ ] **TUI (interactive terminal)** — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner. Lighter alternative to the web UI.
 
-- [ ] **Profile system** — Named profiles in the config (`"profiles": {"dev": [...], "creative": [...], "gaming": [...]}`) with `--profile dev` flag. Selects a subset of packages without needing `--only`.
+- [x] **Profile system** — Named profiles in the config (`"profiles": [{"name": "Dev Only", "ids": [...]}]`) with profile presets in the GUI. CLI `--profile` flag still pending.
 
 - [ ] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Separates "everyone's base" from per-machine overrides.
 
