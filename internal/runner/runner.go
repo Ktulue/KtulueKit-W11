@@ -522,6 +522,39 @@ func (r *Runner) promptReboot(itemName string, currentPhase int) {
 		taskRegistered = true
 	}
 
+	// GUI mode: emit a reboot event and block on the response channel.
+	// The frontend shows a modal; ConfirmReboot/CancelReboot send on the channel.
+	if r.onProgress != nil {
+		r.rep.LogLine(fmt.Sprintf("\n[REBOOT REQUIRED — %s]", itemName))
+		r.rep.LogLine("  Resume command: " + resumeCmd)
+		r.rep.LogLine("")
+		r.onProgress(ProgressEvent{
+			Index:  r.itemIdx,
+			Total:  r.totalItems,
+			ID:     "reboot",
+			Name:   itemName,
+			Status: "reboot",
+		})
+		if r.rebootResponse != nil {
+			confirmed := <-r.rebootResponse
+			r.rebootResponse = nil
+			if confirmed {
+				// Runner calls shutdown; app.go goroutine will emit "complete" after Run() returns.
+				exec.Command("shutdown", "/r", "/t", "30").Run()
+				return
+			}
+			// User cancelled reboot — delete task and continue.
+			scheduler.DeleteResumeTask()
+			r.onProgress(ProgressEvent{
+				Index:  r.itemIdx,
+				Total:  r.totalItems,
+				Name:   itemName,
+				Status: "reboot_cancelled",
+			})
+		}
+		return
+	}
+
 	// Build and print the reboot banner.
 	sep := strings.Repeat("─", 56)
 	var taskLine string
