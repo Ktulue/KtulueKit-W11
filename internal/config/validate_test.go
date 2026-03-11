@@ -145,3 +145,48 @@ func TestValidate_CollectsAllErrors(t *testing.T) {
 		t.Errorf("want >= 2 errors for empty config, got %d: %+v", len(errs), errs)
 	}
 }
+
+func TestValidate_CommandMissingName(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{{ID: "c1", Phase: 1, Check: "x", Cmd: "y"}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for missing command name")
+	}
+}
+
+func TestValidate_CommandBadPhase(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{{ID: "c1", Name: "C1", Phase: 0, Check: "x", Cmd: "y"}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for command phase < 1")
+	}
+}
+
+func TestValidate_ExtensionMissingName(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{ID: "e1", Phase: 1, ExtensionID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for missing extension name")
+	}
+}
+
+func TestValidate_ExtensionBadPhase(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{ID: "e1", Name: "E1", Phase: 0, ExtensionID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for extension phase < 1")
+	}
+}
+
+func TestValidate_ExtensionEmptyExtensionID(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{ID: "e1", Name: "E1", Phase: 1, ExtensionID: ""}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for empty extension_id")
+	}
+}
