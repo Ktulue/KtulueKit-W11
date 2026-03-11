@@ -51,19 +51,19 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 ## One-Liner Code Changes
 
-- [ ] **`winget source update` at startup** — Run `winget source update` before the first install to ensure the package database is current. One call in `runner.Run()` before the phase loop. ~5 lines.
+- [x] **`winget source update` at startup** — Run `winget source update` before the first install to ensure the package database is current. One call in `runner.Run()` before the phase loop. ~5 lines.
 
-- [ ] **Progress counter** — Add `[14/42]` before each install name. Requires counting total items across all phases and passing an index through the run functions. ~15 lines across runner.go.
+- [x] **Progress counter** — Add `[14/42]` before each install name. Requires counting total items across all phases and passing an index through the run functions. ~15 lines across runner.go.
 
-- [ ] **Elapsed time per package** — Wrap each install call with `time.Now()` / `time.Since()` and print duration. Add total elapsed time at the end of the summary. ~20 lines.
+- [x] **Elapsed time per package** — Wrap each install call with `time.Now()` / `time.Since()` and print duration. Add total elapsed time at the end of the summary. ~20 lines.
 
-- [ ] **Completion notification** — Play a system beep or Windows toast notification when the full run finishes. A single `exec.Command("powershell", "-Command", "[console]::beep(800,300)")` at the end of `Run()`, or use PowerShell `New-BurntToastNotification` for a proper toast.
+- [x] **Completion notification** — Play a system beep or Windows toast notification when the full run finishes. A single `exec.Command("powershell", "-Command", "[console]::beep(800,300)")` at the end of `Run()`, or use PowerShell `New-BurntToastNotification` for a proper toast.
 
 ---
 
 ## Small Feature Additions (< 50 lines each)
 
-- [ ] **Winget availability pre-flight check** — Verify `winget --version` succeeds before starting. Fail fast with a clear error message if winget is missing or broken.
+- [x] **Winget availability pre-flight check** — Verify `winget --version` succeeds before starting. Fail fast with a clear error message if winget is missing or broken.
 
 - [ ] **Internet connectivity check** — Quick DNS or HTTP check before starting installs. Could piggyback on `winget source update` (if it fails, no internet).
 

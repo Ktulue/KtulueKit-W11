@@ -138,6 +138,11 @@ func (r *Runner) Run() {
 		r.runCommandsInPhase(phase)
 		r.runExtensionsInPhase(phase)
 	}
+
+	// Play a completion beep (skipped in dry-run).
+	if !r.dryRun {
+		_ = exec.Command("powershell", "-NoProfile", "-Command", "[console]::beep(800,300)").Run()
+	}
 }
 
 // printPreRunSummary scans all config items and prints counts before the install loop starts.
