@@ -29,6 +29,9 @@ func TestCheckItem_StateAwareSkip(t *testing.T) {
 	if result.Status != detector.StatusInstalled {
 		t.Errorf("expected StatusInstalled from state-aware skip, got %v", result.Status)
 	}
+	if result.Item.ID != item.ID {
+		t.Errorf("expected result.Item.ID %q, got %q", item.ID, result.Item.ID)
+	}
 }
 
 func TestCheckItem_NoCheckCmd_ReturnsUnknown(t *testing.T) {
@@ -112,6 +115,35 @@ func TestFlattenItems_IncludesAllTiers(t *testing.T) {
 	}
 }
 
+func TestFlattenItems_OrderIsPackagesThenCommandsThenExtensions(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "pkg-a", Name: "Package A", Phase: 1},
+		},
+		Commands: []config.Command{
+			{ID: "cmd-b", Name: "Command B", Phase: 2},
+		},
+		Extensions: []config.Extension{
+			{ID: "ext-c", Name: "Extension C", Phase: 3},
+		},
+	}
+
+	items := detector.FlattenItems(cfg)
+
+	if len(items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(items))
+	}
+	if items[0].Tier != "winget" {
+		t.Errorf("expected items[0].Tier 'winget' (packages first), got %q", items[0].Tier)
+	}
+	if items[1].Tier != "command" {
+		t.Errorf("expected items[1].Tier 'command', got %q", items[1].Tier)
+	}
+	if items[2].Tier != "extension" {
+		t.Errorf("expected items[2].Tier 'extension', got %q", items[2].Tier)
+	}
+}
+
 func TestFlattenItems_PackageFieldsCorrect(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{
@@ -129,6 +161,26 @@ func TestFlattenItems_PackageFieldsCorrect(t *testing.T) {
 	}
 	if items[0].CheckCmd != "git --version" {
 		t.Errorf("expected CheckCmd 'git --version', got %q", items[0].CheckCmd)
+	}
+}
+
+func TestFlattenItems_CommandFieldsCorrect(t *testing.T) {
+	cfg := &config.Config{
+		Commands: []config.Command{
+			{ID: "claude-code", Name: "Claude Code", Phase: 4, Check: "claude --version"},
+		},
+	}
+
+	items := detector.FlattenItems(cfg)
+
+	if items[0].ID != "claude-code" {
+		t.Errorf("expected ID 'claude-code', got %q", items[0].ID)
+	}
+	if items[0].Tier != "command" {
+		t.Errorf("expected Tier 'command', got %q", items[0].Tier)
+	}
+	if items[0].CheckCmd != "claude --version" {
+		t.Errorf("expected CheckCmd 'claude --version', got %q", items[0].CheckCmd)
 	}
 }
 
@@ -196,5 +248,27 @@ func TestCheckAll_PreservesOrder(t *testing.T) {
 	}
 	if results[1].Item.ID != "second" {
 		t.Errorf("expected second result ID 'second', got %q", results[1].Item.ID)
+	}
+}
+
+func TestCheckAll_AppliesStateAwareSkipPerItem(t *testing.T) {
+	// One item with state.Succeeded=true → StatusInstalled
+	// One item with no state and no check cmd → StatusUnknown
+	s := &state.State{
+		Succeeded: map[string]bool{"known-good": true},
+		Failed:    map[string]bool{},
+	}
+	items := []detector.Item{
+		{ID: "known-good", Name: "Known Good", Tier: "winget"},
+		{ID: "unknown", Name: "Unknown", Tier: "extension"},
+	}
+
+	results := detector.CheckAll(items, s)
+
+	if results[0].Status != detector.StatusInstalled {
+		t.Errorf("expected results[0].Status StatusInstalled, got %v", results[0].Status)
+	}
+	if results[1].Status != detector.StatusUnknown {
+		t.Errorf("expected results[1].Status StatusUnknown, got %v", results[1].Status)
 	}
 }
