@@ -10,12 +10,21 @@ import (
 	"strings"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
+	"github.com/Ktulue/KtulueKit-W11/internal/detector"
 	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
 	"github.com/Ktulue/KtulueKit-W11/internal/installer"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/restore"
 	"github.com/Ktulue/KtulueKit-W11/internal/scheduler"
 	"github.com/Ktulue/KtulueKit-W11/internal/state"
+)
+
+// ANSI color codes for terminal output.
+const (
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorYellow = "\033[33m"
+	colorReset  = "\033[0m"
 )
 
 // Runner orchestrates the full install sequence.
@@ -58,6 +67,10 @@ func (r *Runner) Run() {
 		restore.CreateRestorePoint(r.dryRun)
 	}
 
+	if r.printPreRunSummary() {
+		return
+	}
+
 	phases := r.collectPhases()
 
 	pathRefreshed := false
@@ -81,6 +94,46 @@ func (r *Runner) Run() {
 		r.runCommandsInPhase(phase)
 		r.runExtensionsInPhase(phase)
 	}
+}
+
+// printPreRunSummary scans all config items and prints counts before the install loop starts.
+// Returns true if nothing needs installing (caller should skip the phase loop).
+// Dry-run mode always returns false — it proceeds to show what would be done.
+func (r *Runner) printPreRunSummary() (nothingToDo bool) {
+	if r.dryRun {
+		return false
+	}
+
+	fmt.Println("Scanning machine...")
+	items := detector.FlattenItems(r.cfg)
+	results := detector.CheckAll(items, r.state)
+
+	var installed, missing, unknown int
+	for _, res := range results {
+		switch res.Status {
+		case detector.StatusInstalled:
+			installed++
+		case detector.StatusMissing:
+			missing++
+		case detector.StatusUnknown:
+			unknown++
+		}
+	}
+
+	fmt.Println()
+	fmt.Printf("  %s[OK]%s      Already installed: %d\n", colorGreen, colorReset, installed)
+	fmt.Printf("  %s[MISSING]%s To install:        %d\n", colorRed, colorReset, missing)
+	fmt.Printf("  %s[?]%s       Unknown:           %d\n", colorYellow, colorReset, unknown)
+	fmt.Println()
+
+	if missing == 0 && unknown == 0 {
+		fmt.Println("Nothing to install. Everything is already present.")
+		return true
+	}
+
+	fmt.Println("Starting installation...")
+	fmt.Println("─────────────────────────────────────────────────")
+	return false
 }
 
 // runPackagesInPhase runs all Tier 1 winget packages in this phase.
