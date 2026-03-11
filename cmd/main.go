@@ -38,6 +38,13 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().IntVar(&resumePhase, "resume-phase", 1, "Skip all phases before this number (for post-reboot resume)")
 	root.PersistentFlags().BoolVar(&noDesktopShortcuts, "no-desktop-shortcuts", false, "Automatically remove all desktop shortcuts created by installers (skips prompt)")
 
+	statusCmd := &cobra.Command{
+		Use:   "status",
+		Short: "Scan machine and show install status for all configured items",
+		RunE:  runStatus,
+	}
+	root.AddCommand(statusCmd)
+
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
