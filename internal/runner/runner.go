@@ -28,6 +28,18 @@ const (
 	colorReset  = "\033[0m"
 )
 
+// ProgressEvent is emitted by the runner to report GUI progress.
+// When OnProgress is nil (CLI mode), fmt.Printf is used instead.
+type ProgressEvent struct {
+	Index   int    // 1-based position in the run
+	Total   int    // total items in this run
+	ID      string // item ID
+	Name    string // item display name
+	Status  string // "installing"|"installed"|"upgraded"|"already"|"failed"|"skipped"|"reboot"|"reboot_cancelled"|"shortcut_removed"
+	Detail  string // raw output line, error message, or OnFailurePrompt text
+	Elapsed string // "1m23s" — empty for "installing" events
+}
+
 // Runner orchestrates the full install sequence.
 type Runner struct {
 	cfg          *config.Config
@@ -38,8 +50,11 @@ type Runner struct {
 	configPath   string               // preserved so resume commands can reference the right config file
 	shortcutMode desktop.ShortcutMode // how to handle .lnk files dropped by installers
 	plannedIDs   map[string]bool      // all IDs declared in config (packages + commands)
-	totalItems   int                  // total items in phases >= resumePhase
-	itemIdx      int                  // current item index (1-based, increments each item)
+	totalItems     int                  // total items in phases >= resumePhase
+	itemIdx        int                  // current item index (1-based, increments each item)
+	selectedIDs    map[string]bool      // nil = run all (CLI mode); set by SetSelectedIDs
+	onProgress     func(ProgressEvent)  // nil = print to stdout (CLI mode); set by SetOnProgress
+	rebootResponse chan bool             // nil = no reboot pending; set by SetRebootResponse
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
@@ -62,22 +77,43 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 	}
 }
 
+// SetSelectedIDs limits the run to the given item IDs. Items not in the set
+// are silently skipped and not counted in totalItems. nil = run all (CLI mode).
+func (r *Runner) SetSelectedIDs(ids []string) {
+	r.selectedIDs = make(map[string]bool, len(ids))
+	for _, id := range ids {
+		r.selectedIDs[id] = true
+	}
+}
+
+// SetOnProgress wires a callback for live GUI progress events.
+// When nil (CLI mode), the runner prints to stdout via fmt.Printf as usual.
+func (r *Runner) SetOnProgress(fn func(ProgressEvent)) {
+	r.onProgress = fn
+}
+
+// SetRebootResponse provides the channel the runner blocks on when a reboot
+// is required in GUI mode. ConfirmReboot/CancelReboot send on this channel.
+func (r *Runner) SetRebootResponse(ch chan bool) {
+	r.rebootResponse = ch
+}
+
 // countItemsFromPhase returns the total number of items across all tiers
 // in phases >= fromPhase. Used to drive the [N/Total] progress counter.
 func (r *Runner) countItemsFromPhase(fromPhase int) int {
 	count := 0
 	for _, p := range r.cfg.Packages {
-		if p.Phase >= fromPhase {
+		if p.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[p.ID]) {
 			count++
 		}
 	}
 	for _, c := range r.cfg.Commands {
-		if c.Phase >= fromPhase {
+		if c.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[c.ID]) {
 			count++
 		}
 	}
 	for _, e := range r.cfg.Extensions {
-		if e.Phase >= fromPhase {
+		if e.Phase >= fromPhase && (r.selectedIDs == nil || r.selectedIDs[e.ID]) {
 			count++
 		}
 	}
@@ -157,6 +193,11 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	if r.resumePhase > 1 {
 		return false
 	}
+	// Skip in GUI mode — the selection screen already shows item counts, and
+	// detector results would not reflect the user's selection filter.
+	if r.onProgress != nil {
+		return false
+	}
 
 	fmt.Println("Scanning machine...")
 	items := detector.FlattenItems(r.cfg)
@@ -198,6 +239,9 @@ func (r *Runner) runPackagesInPhase(phase int) {
 		if pkg.Phase != phase {
 			continue
 		}
+		if r.selectedIDs != nil && !r.selectedIDs[pkg.ID] {
+			continue
+		}
 
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-install.
 		if r.state.Succeeded[pkg.ID] {
@@ -210,6 +254,9 @@ func (r *Runner) runPackagesInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
@@ -221,10 +268,17 @@ func (r *Runner) runPackagesInPhase(phase int) {
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Installing: %s\n", r.itemIdx, r.totalItems, pkg.Name)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount, r.cfg.Settings.UpgradeIfInstalled)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: pkg.ID, Name: pkg.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(pkg.ID)
@@ -284,6 +338,9 @@ func (r *Runner) runCommandsInPhase(phase int) {
 		if cmd.Phase != phase {
 			continue
 		}
+		if r.selectedIDs != nil && !r.selectedIDs[cmd.ID] {
+			continue
+		}
 
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-run.
 		if r.state.Succeeded[cmd.ID] {
@@ -296,6 +353,9 @@ func (r *Runner) runCommandsInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
@@ -303,22 +363,33 @@ func (r *Runner) runCommandsInPhase(phase int) {
 		fmt.Printf("\n  [%d/%d] Running: %s\n", r.itemIdx, r.totalItems, cmd.Name)
 
 		if !r.dependenciesMet(cmd.DependsOn) {
+			detail := fmt.Sprintf("dependency not met: %s", strings.Join(cmd.DependsOn, ", "))
 			res := reporter.Result{
 				ID:     cmd.ID,
 				Name:   cmd.Name,
 				Tier:   "command",
 				Status: reporter.StatusSkipped,
-				Detail: fmt.Sprintf("dependency not met: %s", strings.Join(cmd.DependsOn, ", ")),
+				Detail: detail,
 			}
 			r.rep.Add(res)
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "skipped", Detail: detail})
+			}
 			r.state.MarkFailed(cmd.ID)
 			continue
 		}
 
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.RunCommand(cmd, r.dryRun, r.cfg.Settings.RetryCount, r.state)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: cmd.ID, Name: cmd.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready || res.Status == reporter.StatusReboot {
 			r.state.MarkSucceeded(cmd.ID)
@@ -341,6 +412,9 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 		if ext.Phase != phase {
 			continue
 		}
+		if r.selectedIDs != nil && !r.selectedIDs[ext.ID] {
+			continue
+		}
 
 		// State-aware skip: if a previous run already succeeded, don't re-install.
 		if r.state.Succeeded[ext.ID] {
@@ -353,15 +427,25 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 				Status: reporter.StatusAlready,
 				Detail: "already succeeded in a previous run",
 			})
+			if r.onProgress != nil {
+				r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: "already", Detail: "already succeeded in a previous run"})
+			}
 			continue
 		}
 
 		r.itemIdx++
 		fmt.Printf("\n  [%d/%d] Extension: %s\n", r.itemIdx, r.totalItems, ext.Name)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: "installing"})
+		}
 		start := time.Now()
 		res := installer.InstallExtension(ext, r.dryRun)
 		r.rep.Add(res)
-		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
+		elapsed := time.Since(start).Round(time.Second)
+		fmt.Printf("      elapsed: %s\n", elapsed)
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{Index: r.itemIdx, Total: r.totalItems, ID: ext.ID, Name: ext.Name, Status: reporterStatusToGUI(res.Status), Detail: res.Detail, Elapsed: elapsed.String()})
+		}
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(ext.ID)
@@ -390,6 +474,18 @@ func (r *Runner) dependenciesMet(deps []string) bool {
 // promptManualInstall prints fallback guidance when an install command fails,
 // then pauses so the user can read it before the run continues.
 func (r *Runner) promptManualInstall(itemName, guidance string) {
+	if r.onProgress != nil {
+		// GUI mode: emit the guidance text as a failed event detail so the
+		// frontend can render it in the Raw Output drawer. No stdin block.
+		r.onProgress(ProgressEvent{
+			Index:  r.itemIdx,
+			Total:  r.totalItems,
+			Name:   itemName,
+			Status: "failed",
+			Detail: guidance,
+		})
+		return
+	}
 	fmt.Printf("\n  ⚠️  %s failed to install automatically.\n", itemName)
 	fmt.Println("  ──────────────────────────────────────────────────")
 	fmt.Println("  Manual install instructions:")
@@ -424,6 +520,39 @@ func (r *Runner) promptReboot(itemName string, currentPhase int) {
 		fmt.Printf("  [warning] Could not register auto-resume task: %v\n", err)
 	} else {
 		taskRegistered = true
+	}
+
+	// GUI mode: emit a reboot event and block on the response channel.
+	// The frontend shows a modal; ConfirmReboot/CancelReboot send on the channel.
+	if r.onProgress != nil {
+		r.rep.LogLine(fmt.Sprintf("\n[REBOOT REQUIRED — %s]", itemName))
+		r.rep.LogLine("  Resume command: " + resumeCmd)
+		r.rep.LogLine("")
+		r.onProgress(ProgressEvent{
+			Index:  r.itemIdx,
+			Total:  r.totalItems,
+			ID:     "reboot",
+			Name:   itemName,
+			Status: "reboot",
+		})
+		if r.rebootResponse != nil {
+			confirmed := <-r.rebootResponse
+			r.rebootResponse = nil
+			if confirmed {
+				// Runner calls shutdown; app.go goroutine will emit "complete" after Run() returns.
+				exec.Command("shutdown", "/r", "/t", "30").Run()
+				return
+			}
+			// User cancelled reboot — delete task and continue.
+			scheduler.DeleteResumeTask()
+			r.onProgress(ProgressEvent{
+				Index:  r.itemIdx,
+				Total:  r.totalItems,
+				Name:   itemName,
+				Status: "reboot_cancelled",
+			})
+		}
+		return
 	}
 
 	// Build and print the reboot banner.
@@ -509,4 +638,17 @@ func (r *Runner) firstCommandPhase() int {
 		}
 	}
 	return min
+}
+
+// reporterStatusToGUI converts a reporter.Status* constant to the GUI event status string.
+// Most constants match already; only two differ.
+func reporterStatusToGUI(s string) string {
+	switch s {
+	case reporter.StatusAlready:
+		return "already"
+	case reporter.StatusReboot:
+		return "reboot"
+	default:
+		return s
+	}
 }

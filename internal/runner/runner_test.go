@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
+	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
+	"github.com/Ktulue/KtulueKit-W11/internal/state"
 )
 
 func TestCountItemsFromPhase_AllPhases(t *testing.T) {
@@ -50,5 +52,46 @@ func TestCountItemsFromPhase_EmptyConfig(t *testing.T) {
 
 	if got != 0 {
 		t.Errorf("countItemsFromPhase on empty config: expected 0, got %d", got)
+	}
+}
+
+func TestSetSelectedIDsFiltersCount(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "a", Name: "A", Phase: 1},
+			{ID: "b", Name: "B", Phase: 1},
+			{ID: "c", Name: "C", Phase: 2},
+		},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, false, 1, "", 0)
+	r.SetSelectedIDs([]string{"a", "c"})
+
+	total := r.countItemsFromPhase(1)
+	if total != 2 {
+		t.Errorf("want 2 (a + c selected), got %d", total)
+	}
+}
+
+func TestSetSelectedIDsNilRunsAll(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "a", Name: "A", Phase: 1},
+			{ID: "b", Name: "B", Phase: 1},
+		},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, false, 1, "", 0)
+	// selectedIDs is nil — run all
+
+	total := r.countItemsFromPhase(1)
+	if total != 2 {
+		t.Errorf("want 2 (all items), got %d", total)
 	}
 }

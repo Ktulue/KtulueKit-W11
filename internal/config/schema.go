@@ -9,6 +9,7 @@ type Config struct {
 	Packages []Package  `json:"packages"`
 	Commands []Command  `json:"commands"`
 	Extensions []Extension `json:"extensions"`
+	Profiles   []Profile   `json:"profiles"`
 }
 
 type Metadata struct {
@@ -32,6 +33,8 @@ type Package struct {
 	ID             string `json:"id"`
 	Name           string `json:"name"`
 	Phase          int    `json:"phase"`
+	Category       string `json:"category"`        // GUI display grouping — does not affect install order
+	Description    string `json:"description"`    // Short user-facing tooltip: "What does this do?"
 	Scope          string `json:"scope"`           // "machine" | "user" — empty means use Settings.DefaultScope
 	Check          string `json:"check"`           // Optional shell command — exit 0 = already installed, skip winget
 	Version        string `json:"version"`         // Optional — pin to a specific winget package version
@@ -45,6 +48,8 @@ type Command struct {
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
 	Phase           int      `json:"phase"`
+	Category        string   `json:"category"`        // GUI display grouping — does not affect install order
+	Description     string   `json:"description"`     // Short user-facing tooltip: "What does this do?"
 	Check           string   `json:"check"`            // Shell command — exit 0 = already installed, skip
 	Cmd             string   `json:"command"`          // Install command to run
 	DependsOn       []string `json:"depends_on"`       // Winget IDs or command IDs that must have succeeded
@@ -59,8 +64,16 @@ type Extension struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Phase       int    `json:"phase"`
+	Category    string `json:"category"`         // GUI display grouping — does not affect install order
+	Description string `json:"description"`     // Short user-facing tooltip: "What does this do?"
 	ExtensionID string `json:"extension_id"`
 	Browser     string `json:"browser"` // "brave" | "chrome" | "firefox"
 	Mode        string `json:"mode"`    // "force" | "url" — empty means use Settings.ExtensionMode
 	Notes       string `json:"notes"`
+}
+
+// Profile is a named selection preset for the GUI.
+type Profile struct {
+	Name string   `json:"name"`
+	IDs  []string `json:"ids"`
 }
