@@ -109,7 +109,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [ ] **Unit tests** — Tests for pure functions: `classifyWingetExit`, `buildWingetArgs`, `validate`, `applyDefaults`, `dependenciesMet`, `isAlreadyInstalled`. No OS interaction needed. Catches regressions.
 
-- [ ] **Bootstrap script** — The README references `bootstrap.ps1` (Option A) but it doesn't exist. Create a PowerShell script that installs Go, builds the binary, and runs it. Solves the chicken-and-egg problem on a bare machine.
+- [x] **Bootstrap script** — `setup.ps1` installs Go via winget, builds the binary, and launches it with arg passthrough. README updated to reference it.
 
 - [ ] **Config from URL** — `ktuluekit --config https://raw.githubusercontent.com/.../ktuluekit.json` fetches and parses a remote config. Makes it trivial to share configs or pull yours on a fresh machine without cloning.
 

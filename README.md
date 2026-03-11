@@ -29,16 +29,21 @@ Inspired by [Chris Titus Tech's WinUtil](https://github.com/ChrisTitusTech/winut
 - Windows 11 with [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) available (ships with modern W11)
 - An **administrator** terminal (right-click > Run as administrator)
 
-### Option A: Bootstrap from scratch
+### Option A: Setup from scratch
 
-If Go is not yet installed, the bootstrap script handles everything:
+If Go is not yet installed, the setup script handles everything:
 
 ```powershell
 # From an admin PowerShell:
-.\bootstrap.ps1
+.setup.ps1
 ```
 
-This installs Go via winget, refreshes PATH, downloads dependencies, and builds `ktuluekit.exe`.
+This installs Go via winget, refreshes PATH, builds `ktuluekit.exe`, and launches it. Pass any flags through directly:
+
+```powershell
+.setup.ps1 --dry-run
+.setup.ps1 status
+```
 
 ### Option B: Build manually (Go already installed)
 
@@ -151,7 +156,7 @@ SUMMARY
 ## Project Structure
 
 ```
-├── bootstrap.ps1                 # One-shot setup: installs Go, builds the binary
+├── setup.ps1                     # One-shot setup: installs Go, builds and launches the binary
 ├── ktuluekit.json                # Your software stack config (edit this)
 ├── schema/
 │   └── ktuluekit.schema.json     # JSON Schema for editor validation
@@ -183,7 +188,7 @@ See `KtulueKit-Project-Document.md` for the full list of design constraints and 
 - **Go** with [Cobra](https://github.com/spf13/cobra) for the CLI
 - **Winget** for Tier 1 package management
 - **Windows Registry** APIs via `golang.org/x/sys/windows/registry` for browser extension policies
-- **PowerShell bootstrap** for first-run setup on a bare machine
+- **PowerShell setup script** for first-run setup on a bare machine
 
 ## License
 
