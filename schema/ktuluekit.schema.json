@@ -86,6 +86,27 @@
       "type": "array",
       "description": "Tier 3 — Browser extensions installed via registry policy or URL.",
       "items": { "$ref": "#/definitions/Extension" }
+    },
+
+    "profiles": {
+      "type": "array",
+      "description": "Predefined installation profiles grouping package/command/extension IDs.",
+      "items": {
+        "type": "object",
+        "required": ["name", "ids"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable profile name."
+          },
+          "ids": {
+            "type": "array",
+            "description": "List of package, command, and extension IDs to include in this profile.",
+            "items": { "type": "string" }
+          }
+        }
+      }
     }
   },
 
@@ -104,6 +125,14 @@
         "name": {
           "type": "string",
           "description": "Human-readable display name for logs and reports."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category or classification for this package (e.g., 'developer', 'utility', 'runtime')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Extended description of this package."
         },
         "phase": {
           "type": "integer",
@@ -155,6 +184,14 @@
         "name": {
           "type": "string",
           "description": "Human-readable display name for logs and reports."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category or classification for this command (e.g., 'developer', 'utility', 'runtime')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Extended description of this command."
         },
         "phase": {
           "type": "integer",
@@ -211,6 +248,14 @@
         "name": {
           "type": "string",
           "description": "Human-readable display name."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category or classification for this extension (e.g., 'productivity', 'privacy', 'utility')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Extended description of this extension."
         },
         "phase": {
           "type": "integer",
