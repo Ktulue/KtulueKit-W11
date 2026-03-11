@@ -80,6 +80,14 @@ func (r *Runner) Run() {
 		return
 	}
 
+	if !r.dryRun {
+		fmt.Println("Updating winget sources...")
+		if err := installer.UpdateSources(); err != nil {
+			fmt.Printf("  [warning] winget source update failed: %v\n", err)
+		}
+		fmt.Println()
+	}
+
 	phases := r.collectPhases()
 
 	pathRefreshed := false
