@@ -93,6 +93,8 @@ func mergeSettings(dst, src *Settings) {
 	if src.ExtensionMode != "" {
 		dst.ExtensionMode = src.ExtensionMode
 	}
+	// UpgradeIfInstalled is one-way: a later config can enable it but not disable it.
+	// Intentional — clearing bool fields via overlay is not supported per spec.
 	if src.UpgradeIfInstalled {
 		dst.UpgradeIfInstalled = src.UpgradeIfInstalled
 	}

@@ -61,13 +61,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("ktuluekit must be run as Administrator\n  Right-click your terminal and select 'Run as administrator', then try again")
 	}
 
-	// Default to ktuluekit.json if no configs specified
-	paths := configPaths
-	if len(paths) == 0 {
-		paths = []string{"ktuluekit.json"}
-	}
-
-	cfg, err := config.LoadAll(paths)
+	cfg, err := config.LoadAll(configPaths)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
@@ -88,7 +82,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
-	fmt.Printf("Config:  %v\n", paths)
+	// Use the first config path for reporting, defaulting if empty
+	reportingPath := configPaths
+	if len(reportingPath) == 0 {
+		reportingPath = []string{"ktuluekit.json"}
+	}
+
+	fmt.Printf("Config:  %v\n", reportingPath)
 	fmt.Printf("Packages: %d winget  |  %d commands  |  %d extensions\n\n",
 		len(cfg.Packages), len(cfg.Commands), len(cfg.Extensions))
 
@@ -104,7 +104,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		shortcutMode = desktop.PromptMode()
 	}
 
-	r := runner.New(cfg, rep, s, dryRun, resumePhase, paths[0], shortcutMode)
+	r := runner.New(cfg, rep, s, dryRun, resumePhase, reportingPath[0], shortcutMode)
 
 	runStart := time.Now()
 	r.Run()
