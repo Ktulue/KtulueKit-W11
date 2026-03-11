@@ -68,7 +68,7 @@ func TestSetSelectedIDsFiltersCount(t *testing.T) {
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
 	r := New(cfg, rep, s, false, 1, "", 0)
-	r.SetSelectedIDs([]string{"a", "c"})
+	r.SetSelectedIDs(map[string]bool{"a": true, "c": true})
 
 	total := r.countItemsFromPhase(1)
 	if total != 2 {

@@ -165,7 +165,11 @@ func (a *App) StartInstall(ids []string) string {
 		}
 
 		r := runner.New(cfg, rep, s, false, 1, a.configPath, desktop.ShortcutRemove)
-		r.SetSelectedIDs(ids)
+		selectedMap := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			selectedMap[id] = true
+		}
+		r.SetSelectedIDs(selectedMap)
 		r.SetRebootResponse(rebootCh)
 		r.SetOnProgress(func(e runner.ProgressEvent) {
 			runtime.EventsEmit(a.ctx, "progress", e)

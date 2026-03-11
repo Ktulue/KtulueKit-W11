@@ -79,11 +79,8 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 
 // SetSelectedIDs limits the run to the given item IDs. Items not in the set
 // are silently skipped and not counted in totalItems. nil = run all (CLI mode).
-func (r *Runner) SetSelectedIDs(ids []string) {
-	r.selectedIDs = make(map[string]bool, len(ids))
-	for _, id := range ids {
-		r.selectedIDs[id] = true
-	}
+func (r *Runner) SetSelectedIDs(ids map[string]bool) {
+	r.selectedIDs = ids
 }
 
 // SetOnProgress wires a callback for live GUI progress events.
@@ -199,6 +196,11 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	// Skip in GUI mode — the selection screen already shows item counts, and
 	// detector results would not reflect the user's selection filter.
 	if r.onProgress != nil {
+		return false
+	}
+	// Skip when an ID filter is active — the scan would cover all items but
+	// the phase loop will only run the filtered subset, giving misleading counts.
+	if r.selectedIDs != nil {
 		return false
 	}
 
@@ -462,7 +464,8 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 func (r *Runner) dependenciesMet(deps []string) bool {
 	for _, dep := range deps {
 		if r.dryRun {
-			if !r.plannedIDs[dep] && !r.state.Succeeded[dep] {
+			depWillRun := r.plannedIDs[dep] && (r.selectedIDs == nil || r.selectedIDs[dep])
+			if !depWillRun && !r.state.Succeeded[dep] {
 				return false
 			}
 		} else {
