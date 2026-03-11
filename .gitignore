@@ -20,3 +20,6 @@ ktuluekit
 
 # Go
 vendor/
+
+# Git worktrees
+.worktrees/
