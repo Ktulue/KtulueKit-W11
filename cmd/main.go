@@ -20,6 +20,7 @@ var (
 	dryRun             bool
 	resumePhase        int
 	noDesktopShortcuts bool
+	noUpgrade          bool
 )
 
 func main() {
@@ -38,6 +39,7 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be installed without doing it")
 	root.PersistentFlags().IntVar(&resumePhase, "resume-phase", 1, "Skip all phases before this number (for post-reboot resume)")
 	root.PersistentFlags().BoolVar(&noDesktopShortcuts, "no-desktop-shortcuts", false, "Automatically remove all desktop shortcuts created by installers (skips prompt)")
+	root.PersistentFlags().BoolVar(&noUpgrade, "no-upgrade", false, "Skip upgrades for already-installed packages even if upgrade_if_installed is set in config")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -64,6 +66,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	cfg, err := config.LoadAll(configPaths)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
+	}
+	if noUpgrade {
+		cfg.Settings.UpgradeIfInstalled = false
 	}
 
 	rep, err := reporter.New(cfg.Settings.LogDir)

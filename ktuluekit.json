@@ -478,10 +478,10 @@
       "name": "Aseprite",
       "phase": 5,
       "category": "Creative",
-      "description": "Opens the Aseprite site. Pixel art and animation tool (one-time purchase or compile from source).",
+      "description": "Opens the Aseprite Steam page. Pixel art and animation tool (purchase and install via Steam).",
       "check": "echo skip",
-      "command": "start https://www.aseprite.org",
-      "notes": "One-time purchase or compile from source. Tool opens the site."
+      "command": "start https://store.steampowered.com/app/431730/Aseprite/",
+      "notes": "Purchase and install via Steam. Tool opens the Steam store page — you must buy and install it from there."
     },
     {
       "id": "plexamp",
