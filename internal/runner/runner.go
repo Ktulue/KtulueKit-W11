@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
 	"github.com/Ktulue/KtulueKit-W11/internal/detector"
@@ -37,6 +38,8 @@ type Runner struct {
 	configPath   string               // preserved so resume commands can reference the right config file
 	shortcutMode desktop.ShortcutMode // how to handle .lnk files dropped by installers
 	plannedIDs   map[string]bool      // all IDs declared in config (packages + commands)
+	totalItems   int                  // total items in phases >= resumePhase
+	itemIdx      int                  // current item index (1-based, increments each item)
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
@@ -59,8 +62,41 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 	}
 }
 
+// countItemsFromPhase returns the total number of items across all tiers
+// in phases >= fromPhase. Used to drive the [N/Total] progress counter.
+func (r *Runner) countItemsFromPhase(fromPhase int) int {
+	count := 0
+	for _, p := range r.cfg.Packages {
+		if p.Phase >= fromPhase {
+			count++
+		}
+	}
+	for _, c := range r.cfg.Commands {
+		if c.Phase >= fromPhase {
+			count++
+		}
+	}
+	for _, e := range r.cfg.Extensions {
+		if e.Phase >= fromPhase {
+			count++
+		}
+	}
+	return count
+}
+
 // Run executes all phases in order.
 func (r *Runner) Run() {
+	r.totalItems = r.countItemsFromPhase(r.resumePhase)
+
+	// Fail fast if winget is missing or broken.
+	if !r.dryRun {
+		if err := installer.CheckWingetAvailable(); err != nil {
+			fmt.Printf("ERROR: winget is not available: %v\n", err)
+			fmt.Println("Install App Installer from the Microsoft Store, then re-run.")
+			return
+		}
+	}
+
 	// Create a System Restore point before touching anything.
 	// Skipped on resume runs (user already has the pre-run snapshot).
 	if r.resumePhase <= 1 {
@@ -69,6 +105,14 @@ func (r *Runner) Run() {
 
 	if r.printPreRunSummary() {
 		return
+	}
+
+	if !r.dryRun {
+		fmt.Println("Updating winget sources...")
+		if err := installer.UpdateSources(); err != nil {
+			fmt.Printf("  [warning] winget source update failed: %v\n", err)
+		}
+		fmt.Println()
 	}
 
 	phases := r.collectPhases()
@@ -93,6 +137,11 @@ func (r *Runner) Run() {
 		r.runPackagesInPhase(phase)
 		r.runCommandsInPhase(phase)
 		r.runExtensionsInPhase(phase)
+	}
+
+	// Play a completion beep (skipped in dry-run).
+	if !r.dryRun {
+		_ = exec.Command("powershell", "-NoProfile", "-Command", "[console]::beep(800,300)").Run()
 	}
 }
 
@@ -152,7 +201,8 @@ func (r *Runner) runPackagesInPhase(phase int) {
 
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-install.
 		if r.state.Succeeded[pkg.ID] {
-			fmt.Printf("\n  Skipping (already succeeded): %s\n", pkg.Name)
+			r.itemIdx++
+			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, pkg.Name)
 			r.rep.Add(reporter.Result{
 				ID:     pkg.ID,
 				Name:   pkg.Name,
@@ -169,9 +219,12 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			desktopBefore = desktop.Snapshot()
 		}
 
-		fmt.Printf("\n  Installing: %s\n", pkg.Name)
+		r.itemIdx++
+		fmt.Printf("\n  [%d/%d] Installing: %s\n", r.itemIdx, r.totalItems, pkg.Name)
+		start := time.Now()
 		res := installer.InstallPackage(pkg, r.dryRun, r.cfg.Settings.RetryCount, r.cfg.Settings.UpgradeIfInstalled)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(pkg.ID)
@@ -234,7 +287,8 @@ func (r *Runner) runCommandsInPhase(phase int) {
 
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-run.
 		if r.state.Succeeded[cmd.ID] {
-			fmt.Printf("\n  Skipping (already succeeded): %s\n", cmd.Name)
+			r.itemIdx++
+			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, cmd.Name)
 			r.rep.Add(reporter.Result{
 				ID:     cmd.ID,
 				Name:   cmd.Name,
@@ -245,7 +299,8 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			continue
 		}
 
-		fmt.Printf("\n  Running: %s\n", cmd.Name)
+		r.itemIdx++
+		fmt.Printf("\n  [%d/%d] Running: %s\n", r.itemIdx, r.totalItems, cmd.Name)
 
 		if !r.dependenciesMet(cmd.DependsOn) {
 			res := reporter.Result{
@@ -260,8 +315,10 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			continue
 		}
 
+		start := time.Now()
 		res := installer.RunCommand(cmd, r.dryRun, r.cfg.Settings.RetryCount, r.state)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready || res.Status == reporter.StatusReboot {
 			r.state.MarkSucceeded(cmd.ID)
@@ -287,7 +344,8 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 
 		// State-aware skip: if a previous run already succeeded, don't re-install.
 		if r.state.Succeeded[ext.ID] {
-			fmt.Printf("\n  Skipping (already succeeded): %s\n", ext.Name)
+			r.itemIdx++
+			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, ext.Name)
 			r.rep.Add(reporter.Result{
 				ID:     ext.ID,
 				Name:   ext.Name,
@@ -298,9 +356,12 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 			continue
 		}
 
-		fmt.Printf("\n  Extension: %s\n", ext.Name)
+		r.itemIdx++
+		fmt.Printf("\n  [%d/%d] Extension: %s\n", r.itemIdx, r.totalItems, ext.Name)
+		start := time.Now()
 		res := installer.InstallExtension(ext, r.dryRun)
 		r.rep.Add(res)
+		fmt.Printf("      elapsed: %s\n", time.Since(start).Round(time.Second))
 
 		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusAlready {
 			r.state.MarkSucceeded(ext.ID)

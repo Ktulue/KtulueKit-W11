@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -98,9 +99,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	r := runner.New(cfg, rep, s, dryRun, resumePhase, configPath, shortcutMode)
+
+	runStart := time.Now()
 	r.Run()
 
 	rep.Summary()
+	fmt.Printf("Total elapsed: %s\n", time.Since(runStart).Round(time.Second))
 
 	// Only clear state on a fully clean run. If anything failed or was skipped,
 	// preserve state so --resume-phase re-runs know what already succeeded.
