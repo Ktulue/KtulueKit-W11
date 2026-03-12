@@ -115,7 +115,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [ ] **Summary export formats** — `--output-format json` or `--output-format md` for the summary report. Useful for CI/automation or pasting into a GitHub issue.
 
-- [ ] **Export/scan mode** — `ktuluekit export` scans the machine via `winget list` and generates a `ktuluekit.json` from what's currently installed. Great for bootstrapping a config from an existing machine.
+- [x] **Export/scan mode** — `ktuluekit export` scans the machine via check commands and generates a `ktuluekit-snapshot.json` from what's currently installed. Replay-ready config and KtulueKit-Migration handoff artifact. Supports `--fast` (state file) and `--output` flags.
 
 ---
 
