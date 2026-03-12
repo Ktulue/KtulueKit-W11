@@ -250,6 +250,30 @@ func (r *Runner) Run(ctx context.Context) {
 		if !pathRefreshed && phase >= r.firstCommandPhase() {
 			installer.RefreshPath()
 			pathRefreshed = true
+			if !r.dryRun {
+				missing := installer.VerifyRuntimePaths()
+				missingSet := make(map[string]bool, len(missing))
+				for _, m := range missing {
+					missingSet[m] = true
+				}
+				var present []string
+				for _, tool := range installer.RuntimeTools() {
+					if !missingSet[tool] {
+						present = append(present, tool)
+					}
+				}
+				if len(missing) == 0 {
+					fmt.Printf("  %s[OK]%s  All runtime tools found on PATH.\n", colorGreen, colorReset)
+				} else {
+					fmt.Println("  PATH check after refresh:")
+					if len(present) > 0 {
+						fmt.Printf("    %s[OK]%s    %s\n", colorGreen, colorReset, strings.Join(present, ", "))
+					}
+					for _, m := range missing {
+						fmt.Printf("    %s[WARN]%s  %s — not found on PATH (install may not have completed)\n", colorYellow, colorReset, m)
+					}
+				}
+			}
 		}
 
 		r.runPackagesInPhase(ctx, phase)
