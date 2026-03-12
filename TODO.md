@@ -87,11 +87,11 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **`--exclude <ids>` flag** — Skip specific packages during a run. Same filtering approach as `--only`.
 
-- [ ] **`--phase N` (single phase)** — Run only phase N, not N through end. Different from `--resume-phase` which runs from N onward.
+- [x] **`--phase N` (single phase)** — Run only phase N, not N through end. Different from `--resume-phase` which runs from N onward.
 
-- [ ] **`--upgrade-only` flag** — Run only the upgrade path for already-installed packages. Skip anything not yet installed. Useful as a regular maintenance sweep.
+- [x] **`--upgrade-only` flag** — Run only the upgrade path for already-installed packages. Skip anything not yet installed. Useful as a regular maintenance sweep.
 
-- [ ] **Graceful Ctrl+C handling** — Trap SIGINT, save state for the current item, print a clean exit message. Prevents state corruption on interrupt.
+- [x] **Graceful Ctrl+C handling** — Trap SIGINT, save state for the current item, print a clean exit message. Prevents state corruption on interrupt.
 
 - [ ] **PATH verification post-install** — After all runtimes install, scan for `git`, `node`, `python`, `go`, `rustup`, `pwsh` on PATH. Report gaps explicitly before entering command phases.
 
