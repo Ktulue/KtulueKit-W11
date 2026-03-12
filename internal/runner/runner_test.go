@@ -402,11 +402,11 @@ func TestMarkInterrupted_SetsFlag(t *testing.T) {
 	}
 }
 
-func TestMarkInterrupted_PrintsOnce(t *testing.T) {
+func TestMarkInterrupted_IsIdempotent(t *testing.T) {
 	r := &Runner{}
-	// Second call should be a no-op (already interrupted)
+	// Second call should be a no-op — interrupted flag remains true, no panic.
 	r.markInterrupted(1)
-	r.markInterrupted(1) // should not panic or double-print
+	r.markInterrupted(1)
 	if !r.WasInterrupted() {
 		t.Error("WasInterrupted should be true")
 	}
