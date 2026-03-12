@@ -24,6 +24,7 @@ var (
 	noUpgrade          bool
 	onlyIDs            string
 	excludeIDs         string
+	onlyPhase          int
 )
 
 func main() {
@@ -45,6 +46,7 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().BoolVar(&noUpgrade, "no-upgrade", false, "Skip upgrades for already-installed packages even if upgrade_if_installed is set in config")
 	root.PersistentFlags().StringVar(&onlyIDs, "only", "", "comma-separated IDs to install (skip all others)")
 	root.PersistentFlags().StringVar(&excludeIDs, "exclude", "", "comma-separated IDs to exclude from install")
+	root.PersistentFlags().IntVar(&onlyPhase, "phase", 0, "Run only this phase number (0 = run all phases)")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -96,6 +98,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if err := filterFlagsError(onlyIDs, excludeIDs); err != nil {
 		return err
 	}
+	if err := phaseFlagsError(onlyPhase, resumePhase); err != nil {
+		return err
+	}
 
 	rep, err := reporter.New(cfg.Settings.LogDir)
 	if err != nil {
@@ -136,6 +141,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	r := runner.New(cfg, rep, s, dryRun, resumePhase, reportingPath[0], shortcutMode)
+
+	if onlyPhase > 0 {
+		r.SetOnlyPhase(onlyPhase)
+	}
 
 	if onlyIDs != "" {
 		selected, unknowns := buildOnlySet(onlyIDs, allConfigIDs(cfg))
@@ -207,6 +216,14 @@ func buildExcludeSet(raw string, all map[string]bool) (remaining map[string]bool
 func filterFlagsError(only, exclude string) error {
 	if only != "" && exclude != "" {
 		return fmt.Errorf("--only and --exclude are mutually exclusive")
+	}
+	return nil
+}
+
+// phaseFlagsError returns an error if --phase and --resume-phase are both set to non-default values.
+func phaseFlagsError(phase, resumePhase int) error {
+	if phase > 0 && resumePhase > 1 {
+		return fmt.Errorf("--phase and --resume-phase are mutually exclusive")
 	}
 	return nil
 }
