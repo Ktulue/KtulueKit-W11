@@ -390,3 +390,51 @@ func TestUpgradeOnly_ProceedsWhenCommandInstalled(t *testing.T) {
 		t.Errorf("installed command should be processed (itemIdx=1), got %d", r.itemIdx)
 	}
 }
+
+func TestMarkInterrupted_SetsFlag(t *testing.T) {
+	r := &Runner{}
+	if r.WasInterrupted() {
+		t.Fatal("WasInterrupted should be false before any interrupt")
+	}
+	r.markInterrupted(2)
+	if !r.WasInterrupted() {
+		t.Error("WasInterrupted should be true after markInterrupted")
+	}
+}
+
+func TestMarkInterrupted_PrintsOnce(t *testing.T) {
+	r := &Runner{}
+	// Second call should be a no-op (already interrupted)
+	r.markInterrupted(1)
+	r.markInterrupted(1) // should not panic or double-print
+	if !r.WasInterrupted() {
+		t.Error("WasInterrupted should be true")
+	}
+}
+
+func TestCtrlC_StopsBeforeFirstItem(t *testing.T) {
+	// Pre-cancelled context: interrupt fires before any item starts.
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "p1", Name: "P1", Phase: 1, Scope: "machine", TimeoutSeconds: 300},
+		},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel
+
+	r := New(cfg, rep, s, true, 1, "", 0)
+	r.runPackagesInPhase(ctx, 1)
+
+	if !r.WasInterrupted() {
+		t.Error("WasInterrupted should be true after cancelled-context run")
+	}
+	if r.itemIdx != 0 {
+		t.Errorf("no items should start when ctx is pre-cancelled, got itemIdx=%d", r.itemIdx)
+	}
+}

@@ -64,6 +64,7 @@ type Runner struct {
 	consecutiveFails int            // counts back-to-back StatusFailed or StatusSkipped results
 	pauseResponse    chan bool       // GUI mode: GUI sends true when user clicks "continue"
 	onPause          func()         // test hook: when non-nil, replaces both CLI and GUI pause behavior; production code leaves this nil
+	interrupted bool            // set true when a SIGINT is received during a run
 }
 
 func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool, resumePhase int, configPath string, shortcutMode desktop.ShortcutMode) *Runner {
@@ -125,6 +126,20 @@ func (r *Runner) SetPauseResponse(ch chan bool) {
 // Production code leaves this nil. Tests set it to verify the counter fires correctly.
 func (r *Runner) SetOnPause(fn func()) {
 	r.onPause = fn
+}
+
+// markInterrupted prints a one-time interrupt message and sets r.interrupted.
+// The caller is responsible for returning from the current loop body.
+func (r *Runner) markInterrupted(phase int) {
+	if !r.interrupted {
+		fmt.Printf("\n  Interrupted — finishing current item then stopping. Run with --resume-phase=%d to continue.\n", phase)
+		r.interrupted = true
+	}
+}
+
+// WasInterrupted reports whether the run was stopped by a Ctrl+C signal.
+func (r *Runner) WasInterrupted() bool {
+	return r.interrupted
 }
 
 // countItemsFromPhase returns the total number of items across all tiers
@@ -313,6 +328,10 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 // runPackagesInPhase runs all Tier 1 winget packages in this phase.
 func (r *Runner) runPackagesInPhase(ctx context.Context, phase int) {
 	for _, pkg := range r.cfg.Packages {
+		if ctx.Err() != nil {
+			r.markInterrupted(phase)
+			return
+		}
 		if pkg.Phase != phase {
 			continue
 		}
@@ -428,6 +447,10 @@ func (r *Runner) cleanupShortcuts(pkgName string, before map[string]bool) {
 // runCommandsInPhase runs all Tier 2 shell commands in this phase.
 func (r *Runner) runCommandsInPhase(ctx context.Context, phase int) {
 	for _, cmd := range r.cfg.Commands {
+		if ctx.Err() != nil {
+			r.markInterrupted(phase)
+			return
+		}
 		if cmd.Phase != phase {
 			continue
 		}
@@ -515,6 +538,10 @@ func (r *Runner) runCommandsInPhase(ctx context.Context, phase int) {
 // runExtensionsInPhase runs all Tier 3 browser extensions in this phase.
 func (r *Runner) runExtensionsInPhase(ctx context.Context, phase int) {
 	for _, ext := range r.cfg.Extensions {
+		if ctx.Err() != nil {
+			r.markInterrupted(phase)
+			return
+		}
 		if ext.Phase != phase {
 			continue
 		}
