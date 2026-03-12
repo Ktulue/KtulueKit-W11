@@ -176,11 +176,11 @@ func (a *App) StartInstall(ids []string) string {
 		})
 
 		runStart := time.Now()
-		r.Run()
+		r.Run(context.Background())
 		elapsed := time.Since(runStart).Round(time.Second).String()
 
 		// Mirror CLI behaviour: clear succeeded state only on a fully clean run.
-		if !rep.HasFailures() {
+		if !rep.HasFailures() && !r.WasInterrupted() {
 			_ = state.Clear()
 		}
 

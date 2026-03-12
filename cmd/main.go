@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -24,6 +26,8 @@ var (
 	noUpgrade          bool
 	onlyIDs            string
 	excludeIDs         string
+	onlyPhase          int
+	upgradeOnly        bool
 )
 
 func main() {
@@ -45,6 +49,8 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().BoolVar(&noUpgrade, "no-upgrade", false, "Skip upgrades for already-installed packages even if upgrade_if_installed is set in config")
 	root.PersistentFlags().StringVar(&onlyIDs, "only", "", "comma-separated IDs to install (skip all others)")
 	root.PersistentFlags().StringVar(&excludeIDs, "exclude", "", "comma-separated IDs to exclude from install")
+	root.PersistentFlags().IntVar(&onlyPhase, "phase", 0, "Run only this phase number (0 = run all phases)")
+	root.PersistentFlags().BoolVar(&upgradeOnly, "upgrade-only", false, "Skip packages not yet installed; force upgrade on installed ones")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -92,8 +98,17 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if noUpgrade {
 		cfg.Settings.UpgradeIfInstalled = false
 	}
+	if upgradeOnly {
+		cfg.Settings.UpgradeIfInstalled = true
+	}
 
 	if err := filterFlagsError(onlyIDs, excludeIDs); err != nil {
+		return err
+	}
+	if err := phaseFlagsError(onlyPhase, resumePhase); err != nil {
+		return err
+	}
+	if err := upgradeOnlyFlagsError(upgradeOnly, noUpgrade); err != nil {
 		return err
 	}
 
@@ -137,6 +152,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	r := runner.New(cfg, rep, s, dryRun, resumePhase, reportingPath[0], shortcutMode)
 
+	if onlyPhase > 0 {
+		r.SetOnlyPhase(onlyPhase)
+	}
+	if upgradeOnly {
+		r.SetUpgradeOnly(true)
+	}
+
 	if onlyIDs != "" {
 		selected, unknowns := buildOnlySet(onlyIDs, allConfigIDs(cfg))
 		for _, id := range unknowns {
@@ -151,15 +173,18 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		r.SetSelectedIDs(remaining)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	runStart := time.Now()
-	r.Run()
+	r.Run(ctx)
 
 	rep.Summary()
 	fmt.Printf("Total elapsed: %s\n", time.Since(runStart).Round(time.Second))
 
-	// Only clear state on a fully clean run. If anything failed or was skipped,
-	// preserve state so --resume-phase re-runs know what already succeeded.
-	if !dryRun && !rep.HasFailures() {
+	// Only clear state on a fully clean, complete run.
+	// Preserve state if there were failures OR if the run was interrupted early.
+	if !dryRun && !rep.HasFailures() && !r.WasInterrupted() {
 		_ = state.Clear()
 	}
 
@@ -207,6 +232,22 @@ func buildExcludeSet(raw string, all map[string]bool) (remaining map[string]bool
 func filterFlagsError(only, exclude string) error {
 	if only != "" && exclude != "" {
 		return fmt.Errorf("--only and --exclude are mutually exclusive")
+	}
+	return nil
+}
+
+// phaseFlagsError returns an error if --phase and --resume-phase are both set to non-default values.
+func phaseFlagsError(phase, resumePhase int) error {
+	if phase > 0 && resumePhase > 1 {
+		return fmt.Errorf("--phase and --resume-phase are mutually exclusive")
+	}
+	return nil
+}
+
+// upgradeOnlyFlagsError returns an error if --upgrade-only and --no-upgrade are both set.
+func upgradeOnlyFlagsError(upgradeOnly, noUpgrade bool) error {
+	if upgradeOnly && noUpgrade {
+		return fmt.Errorf("--upgrade-only and --no-upgrade are mutually exclusive")
 	}
 	return nil
 }

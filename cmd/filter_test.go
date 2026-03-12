@@ -70,6 +70,54 @@ func TestAllConfigIDs_OnlyFiltering(t *testing.T) {
 	}
 }
 
+func TestPhaseFlagsError_BothSet(t *testing.T) {
+	if err := phaseFlagsError(2, 2); err == nil {
+		t.Fatal("expected error when --phase=2 and --resume-phase=2, got nil")
+	}
+}
+
+func TestPhaseFlagsError_PhaseOnly(t *testing.T) {
+	if err := phaseFlagsError(2, 1); err != nil {
+		t.Fatalf("expected no error when --resume-phase is default (1), got %v", err)
+	}
+}
+
+func TestPhaseFlagsError_NeitherSet(t *testing.T) {
+	if err := phaseFlagsError(0, 1); err != nil {
+		t.Fatalf("expected no error when --phase is default (0), got %v", err)
+	}
+}
+
+func TestPhaseFlagsError_ResumePhaseOnly(t *testing.T) {
+	if err := phaseFlagsError(0, 2); err != nil {
+		t.Fatalf("expected no error when only --resume-phase is set, got %v", err)
+	}
+}
+
+func TestUpgradeOnlyFlagsError_BothSet(t *testing.T) {
+	if err := upgradeOnlyFlagsError(true, true); err == nil {
+		t.Fatal("expected error when --upgrade-only and --no-upgrade are both set, got nil")
+	}
+}
+
+func TestUpgradeOnlyFlagsError_UpgradeOnlyOnly(t *testing.T) {
+	if err := upgradeOnlyFlagsError(true, false); err != nil {
+		t.Fatalf("expected no error when only --upgrade-only is set, got %v", err)
+	}
+}
+
+func TestUpgradeOnlyFlagsError_NoUpgradeOnly(t *testing.T) {
+	if err := upgradeOnlyFlagsError(false, true); err != nil {
+		t.Fatalf("expected no error when only --no-upgrade is set, got %v", err)
+	}
+}
+
+func TestUpgradeOnlyFlagsError_NeitherSet(t *testing.T) {
+	if err := upgradeOnlyFlagsError(false, false); err != nil {
+		t.Fatalf("expected no error when neither flag is set, got %v", err)
+	}
+}
+
 func TestAllConfigIDs_ExcludeFiltering(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{{ID: "Git.Git"}, {ID: "7zip.7zip"}},

@@ -87,11 +87,11 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **`--exclude <ids>` flag** — Skip specific packages during a run. Same filtering approach as `--only`.
 
-- [ ] **`--phase N` (single phase)** — Run only phase N, not N through end. Different from `--resume-phase` which runs from N onward.
+- [x] **`--phase N` (single phase)** — Run only phase N, not N through end. Different from `--resume-phase` which runs from N onward.
 
-- [ ] **`--upgrade-only` flag** — Run only the upgrade path for already-installed packages. Skip anything not yet installed. Useful as a regular maintenance sweep.
+- [x] **`--upgrade-only` flag** — Run only the upgrade path for already-installed packages. Skip anything not yet installed. Useful as a regular maintenance sweep.
 
-- [ ] **Graceful Ctrl+C handling** — Trap SIGINT, save state for the current item, print a clean exit message. Prevents state corruption on interrupt.
+- [x] **Graceful Ctrl+C handling** — Trap SIGINT, save state for the current item, print a clean exit message. Prevents state corruption on interrupt.
 
 - [ ] **PATH verification post-install** — After all runtimes install, scan for `git`, `node`, `python`, `go`, `rustup`, `pwsh` on PATH. Report gaps explicitly before entering command phases.
 
@@ -123,7 +123,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Web UI / Desktop GUI** — Wails v2 + Svelte 4 desktop app (`ktuluekit-gui.exe`). Category accordion with checkboxes, profile presets, live progress feed, reboot dialog, summary screen.
 
-- [ ] **TUI (interactive terminal)** *(nice-to-have — lower priority given the Wails GUI)* — `ktuluekit --interactive` or `-i` flag using `charmbracelet/bubbletea` + `lipgloss`. Checkbox selection screen grouped by phase, arrow keys to navigate, space to toggle, enter to confirm. Hands filtered config to existing runner.
+- [x] ~~**TUI (interactive terminal)**~~ — *Removed. The Wails WebView GUI covers this use case. No TUI needed.*
 
 - [x] **Profile system** — Named profiles in the config (`"profiles": [{"name": "Dev Only", "ids": [...]}]`) with profile presets in the GUI. CLI `--profile` flag still pending.
 
