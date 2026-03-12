@@ -57,6 +57,10 @@ type Command struct {
 	TimeoutSeconds  int      `json:"timeout_seconds"`
 	OnFailurePrompt string   `json:"on_failure_prompt"` // If set, printed to the user when the command fails, then waits for Enter
 	Notes           string   `json:"notes"`
+	// Scrape-download fields — mutually exclusive with Cmd.
+	ScrapeURL   string `json:"scrape_url"`
+	URLPattern  string `json:"url_pattern"`
+	InstallArgs string `json:"install_args"`
 }
 
 // Extension is a Tier 3 browser extension.
