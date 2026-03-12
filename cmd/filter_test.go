@@ -72,19 +72,25 @@ func TestAllConfigIDs_OnlyFiltering(t *testing.T) {
 
 func TestPhaseFlagsError_BothSet(t *testing.T) {
 	if err := phaseFlagsError(2, 2); err == nil {
-		t.Error("expected error when --phase=2 and --resume-phase=2, got nil")
+		t.Fatal("expected error when --phase=2 and --resume-phase=2, got nil")
 	}
 }
 
 func TestPhaseFlagsError_PhaseOnly(t *testing.T) {
 	if err := phaseFlagsError(2, 1); err != nil {
-		t.Errorf("expected no error when --resume-phase is default (1), got %v", err)
+		t.Fatalf("expected no error when --resume-phase is default (1), got %v", err)
 	}
 }
 
 func TestPhaseFlagsError_NeitherSet(t *testing.T) {
 	if err := phaseFlagsError(0, 1); err != nil {
-		t.Errorf("expected no error when --phase is default (0), got %v", err)
+		t.Fatalf("expected no error when --phase is default (0), got %v", err)
+	}
+}
+
+func TestPhaseFlagsError_ResumePhaseOnly(t *testing.T) {
+	if err := phaseFlagsError(0, 2); err != nil {
+		t.Fatalf("expected no error when only --resume-phase is set, got %v", err)
 	}
 }
 
