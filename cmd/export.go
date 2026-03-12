@@ -36,7 +36,7 @@ type snapshotFile struct {
 	Profiles   []config.Profile     `json:"profiles"`
 }
 
-func runExport(cmd *cobra.Command, args []string) error {
+func runExport(_ *cobra.Command, _ []string) error {
 	// Resolve config path.
 	paths := configPaths
 	if len(paths) == 0 {
