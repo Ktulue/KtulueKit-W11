@@ -27,6 +27,13 @@ func statePath() string {
 	return filepath.Join(base, "KtulueKit", "state.json")
 }
 
+// StatePath returns the resolved path for the state file.
+// Exported so callers (e.g. cmd/export.go) can check file existence
+// without replicating path resolution logic.
+func StatePath() string {
+	return statePath()
+}
+
 func Load() (*State, error) {
 	s := &State{
 		Succeeded: make(map[string]bool),

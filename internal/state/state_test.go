@@ -159,3 +159,11 @@ func TestStatePath_CreatesDirectory(t *testing.T) {
 		t.Error("Save() should create directory and write file")
 	}
 }
+
+func TestStatePath_ReturnsNonEmptyString(t *testing.T) {
+	// state_test.go is package state (internal), so no package qualifier needed.
+	p := StatePath()
+	if p == "" {
+		t.Error("StatePath() returned empty string")
+	}
+}
