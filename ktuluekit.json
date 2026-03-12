@@ -399,6 +399,15 @@
       "notes": "API development and testing platform."
     },
     {
+      "id": "GitHub.cli",
+      "name": "GitHub CLI",
+      "phase": 3,
+      "category": "Dev Tools",
+      "description": "Official GitHub CLI. Manage repos, PRs, issues, and Actions from the terminal.",
+      "check": "gh --version",
+      "notes": "Authentication (gh auth login) handled separately in KtulueKit-Migration or by the user post-install."
+    },
+    {
       "id": "Anthropic.Claude",
       "name": "Claude Desktop",
       "phase": 3,
@@ -801,7 +810,7 @@
         "Atlassian.Sourcetree", "Microsoft.VisualStudioCode",
         "Valve.Steam", "Discord.Discord", "Spotify.Spotify",
         "OBSProject.OBSStudio", "Brave.Brave", "Postman.Postman",
-        "Anthropic.Claude", "Pencil.Desktop",
+        "GitHub.cli", "Anthropic.Claude", "Pencil.Desktop",
         "claude-code", "nerd-fonts-cascadia", "wsl2-ubuntu",
         "dragonruby", "meshmixer", "aseprite", "plexamp", "hype-control",
         "claude-ruby-marketplace", "peon-ping", "dragonruby-control",
@@ -819,7 +828,7 @@
         "Git.Git", "Microsoft.PowerShell", "Microsoft.DotNet.SDK.8",
         "OpenJS.NodeJS.LTS", "Python.Python.3.12", "Rustlang.Rustup", "GoLang.Go",
         "dbeaver.dbeaver", "Microsoft.VisualStudioCode", "Atlassian.Sourcetree", "Postman.Postman",
-        "JanDeDobbeleer.OhMyPosh", "Anthropic.Claude", "Pencil.Desktop",
+        "GitHub.cli", "JanDeDobbeleer.OhMyPosh", "Anthropic.Claude", "Pencil.Desktop",
         "claude-code", "nerd-fonts-cascadia", "wsl2-ubuntu",
         "git-config-editor", "git-config-credential", "ps-profile-omp", "wt-font-config",
         "npm-typescript", "npm-prettier", "pip-pipx", "pip-black", "pip-ruff",
