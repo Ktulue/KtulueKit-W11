@@ -237,9 +237,9 @@ func (r *Runner) Run() {
 			pathRefreshed = true
 		}
 
-		r.runPackagesInPhase(context.Background(), phase)
-		r.runCommandsInPhase(context.Background(), phase)
-		r.runExtensionsInPhase(context.Background(), phase)
+		r.runPackagesInPhase(context.Background(), phase)    // TODO(Task 7): replace with real ctx
+		r.runCommandsInPhase(context.Background(), phase)    // TODO(Task 7): replace with real ctx
+		r.runExtensionsInPhase(context.Background(), phase)  // TODO(Task 7): replace with real ctx
 	}
 
 	// Play a completion beep (skipped in dry-run).

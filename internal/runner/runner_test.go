@@ -343,3 +343,50 @@ func TestUpgradeOnly_SkipsExtensionSilently(t *testing.T) {
 		t.Errorf("extension should be silently skipped (itemIdx=0), got %d", r.itemIdx)
 	}
 }
+
+func TestUpgradeOnly_SkipsMissingCommand(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{},
+		Commands: []config.Command{
+			{ID: "missing-cmd", Name: "Missing Cmd", Phase: 1, Check: "cmd /C exit 1"},
+		},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, true, 1, "", 0)
+	r.SetUpgradeOnly(true)
+
+	r.runCommandsInPhase(context.Background(), 1)
+
+	if r.itemIdx != 0 {
+		t.Errorf("missing command should be skipped (itemIdx=0), got %d", r.itemIdx)
+	}
+}
+
+func TestUpgradeOnly_ProceedsWhenCommandInstalled(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{},
+		Commands: []config.Command{
+			{ID: "installed-cmd", Name: "Installed Cmd", Phase: 1, Cmd: "echo skip"},
+		},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{
+		Succeeded: map[string]bool{"installed-cmd": true},
+		Failed:    make(map[string]bool),
+	}
+
+	r := New(cfg, rep, s, true, 1, "", 0) // dryRun=true
+	r.SetUpgradeOnly(true)
+
+	r.runCommandsInPhase(context.Background(), 1)
+
+	if r.itemIdx != 1 {
+		t.Errorf("installed command should be processed (itemIdx=1), got %d", r.itemIdx)
+	}
+}
