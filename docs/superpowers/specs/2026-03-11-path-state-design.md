@@ -90,13 +90,9 @@ Resolved at runtime via `os.Getenv("LOCALAPPDATA")`. If `LOCALAPPDATA` is empty 
 
 Migration is silent — no user-facing output. Old file is deleted only after the new file is successfully written. If the process is killed between the write and the delete, the orphaned CWD file will be harmlessly ignored on subsequent runs because step 2 (new path) takes precedence.
 
-### All Writes
-
-All writes (`Save()`, `MarkSucceeded`, `MarkFailed`, `SaveResumePhase`) go to the new path. `Clear()` deletes the new path file.
-
 ### Write / Clear
 
-All writes (`Save()`, `MarkSucceeded`, `MarkFailed`, `SaveResumePhase`) go to the new path. `Clear()` deletes the new path file.
+All writes (`Save()`, `MarkSucceeded`, `MarkFailed`, `SaveResumePhase`) go to the new path. `Clear()` deletes the new path file. When `LOCALAPPDATA` is empty and the CWD fallback is active, all writes and `Clear()` target the CWD file — consistent with how `Load()` behaves in that case.
 
 ### Call Sites
 
