@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -57,6 +58,7 @@ type Runner struct {
 	itemIdx        int                  // current item index (1-based, increments each item)
 	selectedIDs    map[string]bool      // nil = run all (CLI mode); set by SetSelectedIDs
 	onlyPhase      int                  // 0 = run all phases; > 0 = run only this phase
+	upgradeOnly    bool                 // if true, skip items not yet installed; force upgrade on installed ones
 	onProgress     func(ProgressEvent)  // nil = print to stdout (CLI mode); set by SetOnProgress
 	rebootResponse chan bool             // nil = no reboot pending; set by SetRebootResponse
 	consecutiveFails int            // counts back-to-back StatusFailed or StatusSkipped results
@@ -93,6 +95,11 @@ func (r *Runner) SetSelectedIDs(ids map[string]bool) {
 // SetOnlyPhase restricts the run to a single phase. 0 = run all (default).
 func (r *Runner) SetOnlyPhase(n int) {
 	r.onlyPhase = n
+}
+
+// SetUpgradeOnly restricts the run to already-installed items and forces upgrade.
+func (r *Runner) SetUpgradeOnly(v bool) {
+	r.upgradeOnly = v
 }
 
 // SetOnProgress wires a callback for live GUI progress events.
@@ -230,9 +237,9 @@ func (r *Runner) Run() {
 			pathRefreshed = true
 		}
 
-		r.runPackagesInPhase(phase)
-		r.runCommandsInPhase(phase)
-		r.runExtensionsInPhase(phase)
+		r.runPackagesInPhase(context.Background(), phase)
+		r.runCommandsInPhase(context.Background(), phase)
+		r.runExtensionsInPhase(context.Background(), phase)
 	}
 
 	// Play a completion beep (skipped in dry-run).
@@ -304,7 +311,7 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 }
 
 // runPackagesInPhase runs all Tier 1 winget packages in this phase.
-func (r *Runner) runPackagesInPhase(phase int) {
+func (r *Runner) runPackagesInPhase(ctx context.Context, phase int) {
 	for _, pkg := range r.cfg.Packages {
 		if pkg.Phase != phase {
 			continue
@@ -313,8 +320,22 @@ func (r *Runner) runPackagesInPhase(phase int) {
 			continue
 		}
 
+		// upgrade-only: skip items not yet installed.
+		if r.upgradeOnly {
+			item := detector.Item{ID: pkg.ID, Name: pkg.Name, Phase: pkg.Phase, Tier: "winget", CheckCmd: pkg.Check}
+			result := detector.CheckItem(item, r.state)
+			switch result.Status {
+			case detector.StatusMissing:
+				continue // skip silently
+			case detector.StatusUnknown:
+				fmt.Printf("  %sWARN%s  --upgrade-only: no check command for %q, skipping\n", colorYellow, colorReset, pkg.Name)
+				continue
+			}
+			// StatusInstalled: fall through — bypass state-aware skip so we actually upgrade
+		}
+
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-install.
-		if r.state.Succeeded[pkg.ID] {
+		if r.state.Succeeded[pkg.ID] && !r.upgradeOnly {
 			r.itemIdx++
 			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, pkg.Name)
 			r.rep.Add(reporter.Result{
@@ -405,7 +426,7 @@ func (r *Runner) cleanupShortcuts(pkgName string, before map[string]bool) {
 }
 
 // runCommandsInPhase runs all Tier 2 shell commands in this phase.
-func (r *Runner) runCommandsInPhase(phase int) {
+func (r *Runner) runCommandsInPhase(ctx context.Context, phase int) {
 	for _, cmd := range r.cfg.Commands {
 		if cmd.Phase != phase {
 			continue
@@ -414,8 +435,18 @@ func (r *Runner) runCommandsInPhase(phase int) {
 			continue
 		}
 
+		// upgrade-only: skip commands not yet installed. Commands with no check are skipped silently
+		// (shell commands rarely have reliable check mechanisms).
+		if r.upgradeOnly {
+			item := detector.Item{ID: cmd.ID, Name: cmd.Name, Phase: cmd.Phase, Tier: "command", CheckCmd: cmd.Check}
+			result := detector.CheckItem(item, r.state)
+			if result.Status != detector.StatusInstalled {
+				continue // skip silently (missing or unknown)
+			}
+		}
+
 		// State-aware skip: if a previous run already succeeded, don't re-check or re-run.
-		if r.state.Succeeded[cmd.ID] {
+		if r.state.Succeeded[cmd.ID] && !r.upgradeOnly {
 			r.itemIdx++
 			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, cmd.Name)
 			r.rep.Add(reporter.Result{
@@ -482,7 +513,7 @@ func (r *Runner) runCommandsInPhase(phase int) {
 }
 
 // runExtensionsInPhase runs all Tier 3 browser extensions in this phase.
-func (r *Runner) runExtensionsInPhase(phase int) {
+func (r *Runner) runExtensionsInPhase(ctx context.Context, phase int) {
 	for _, ext := range r.cfg.Extensions {
 		if ext.Phase != phase {
 			continue
@@ -491,8 +522,14 @@ func (r *Runner) runExtensionsInPhase(phase int) {
 			continue
 		}
 
+		// upgrade-only: extensions have no check command and always return StatusUnknown.
+		// Skip them silently — extensions cannot be programmatically upgraded.
+		if r.upgradeOnly {
+			continue
+		}
+
 		// State-aware skip: if a previous run already succeeded, don't re-install.
-		if r.state.Succeeded[ext.ID] {
+		if r.state.Succeeded[ext.ID] && !r.upgradeOnly {
 			r.itemIdx++
 			fmt.Printf("\n  [%d/%d] Skipping (already succeeded): %s\n", r.itemIdx, r.totalItems, ext.Name)
 			r.rep.Add(reporter.Result{

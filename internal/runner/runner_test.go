@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
@@ -238,12 +239,107 @@ func TestConsecutiveFailures_StateAwareSkipNeutral(t *testing.T) {
 	var pauseCount int
 	r.SetOnPause(func() { pauseCount++ })
 
-	r.runPackagesInPhase(1) // should take the state-aware-skip path, not call trackResult
+	r.runPackagesInPhase(context.Background(), 1) // should take the state-aware-skip path, not call trackResult
 
 	if r.consecutiveFails != 1 {
 		t.Errorf("state-aware skip should not change consecutiveFails: want 1, got %d", r.consecutiveFails)
 	}
 	if pauseCount != 0 {
 		t.Errorf("state-aware skip should not trigger pause, got %d", pauseCount)
+	}
+}
+
+func TestUpgradeOnly_SkipsMissingPackage(t *testing.T) {
+	// "cmd /C exit 1" deterministically returns non-zero → detector sees StatusMissing
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "missing-pkg", Name: "Missing", Phase: 1, Check: "cmd /C exit 1"},
+		},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, true, 1, "", 0) // dryRun=true
+	r.SetUpgradeOnly(true)
+
+	r.runPackagesInPhase(context.Background(), 1)
+
+	if r.itemIdx != 0 {
+		t.Errorf("missing package should be skipped (itemIdx=0), got %d", r.itemIdx)
+	}
+}
+
+func TestUpgradeOnly_SkipsUnknownPackage(t *testing.T) {
+	// No check command → detector returns StatusUnknown → skip with warning
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "unknown-pkg", Name: "Unknown", Phase: 1, Check: ""},
+		},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, true, 1, "", 0)
+	r.SetUpgradeOnly(true)
+
+	r.runPackagesInPhase(context.Background(), 1)
+
+	if r.itemIdx != 0 {
+		t.Errorf("unknown package should be skipped (itemIdx=0), got %d", r.itemIdx)
+	}
+}
+
+func TestUpgradeOnly_ProceedsWhenInstalled(t *testing.T) {
+	// state.Succeeded → detector returns StatusInstalled → proceed (dry-run, no OS call)
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "installed-pkg", Name: "Installed", Phase: 1, Scope: "machine", TimeoutSeconds: 300},
+		},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{
+		Succeeded: map[string]bool{"installed-pkg": true},
+		Failed:    make(map[string]bool),
+	}
+
+	r := New(cfg, rep, s, true, 1, "", 0) // dryRun=true
+	r.SetUpgradeOnly(true)
+
+	r.runPackagesInPhase(context.Background(), 1)
+
+	if r.itemIdx != 1 {
+		t.Errorf("installed package should be processed (itemIdx=1), got %d", r.itemIdx)
+	}
+}
+
+func TestUpgradeOnly_SkipsExtensionSilently(t *testing.T) {
+	// Extensions never have a check command → StatusUnknown → skip silently (no warning)
+	cfg := &config.Config{
+		Packages:   []config.Package{},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{
+			{ID: "ext1", Name: "Extension", Phase: 1},
+		},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, true, 1, "", 0)
+	r.SetUpgradeOnly(true)
+
+	r.runExtensionsInPhase(context.Background(), 1)
+
+	if r.itemIdx != 0 {
+		t.Errorf("extension should be silently skipped (itemIdx=0), got %d", r.itemIdx)
 	}
 }
