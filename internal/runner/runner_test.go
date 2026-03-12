@@ -209,6 +209,9 @@ func TestSetOnlyPhase_TotalItemsReflectsOnlyPhase(t *testing.T) {
 
 	r := New(cfg, rep, s, false, 1, "", 0)
 	r.SetOnlyPhase(2)
+	if r.onlyPhase != 2 {
+		t.Errorf("SetOnlyPhase(2): expected r.onlyPhase=2, got %d", r.onlyPhase)
+	}
 
 	// countItemsInPhase(2) should return 2 (p2 + p3 only)
 	if got := r.countItemsInPhase(2); got != 2 {
