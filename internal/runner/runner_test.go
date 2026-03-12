@@ -55,6 +55,42 @@ func TestCountItemsFromPhase_EmptyConfig(t *testing.T) {
 	}
 }
 
+func TestCountItemsInPhase_ExactMatch(t *testing.T) {
+	r := &Runner{
+		cfg: &config.Config{
+			Packages:   []config.Package{{ID: "p1", Phase: 1}, {ID: "p2", Phase: 2}},
+			Commands:   []config.Command{{ID: "c1", Phase: 2}},
+			Extensions: []config.Extension{{ID: "e1", Phase: 3}},
+		},
+	}
+	if got := r.countItemsInPhase(2); got != 2 {
+		t.Errorf("countItemsInPhase(2): expected 2 (p2+c1), got %d", got)
+	}
+}
+
+func TestCountItemsInPhase_OtherPhasesExcluded(t *testing.T) {
+	r := &Runner{
+		cfg: &config.Config{
+			Packages: []config.Package{{ID: "p1", Phase: 1}, {ID: "p2", Phase: 3}},
+		},
+	}
+	if got := r.countItemsInPhase(2); got != 0 {
+		t.Errorf("countItemsInPhase(2) with no phase-2 items: expected 0, got %d", got)
+	}
+}
+
+func TestCountItemsInPhase_RespectsSelectedIDs(t *testing.T) {
+	r := &Runner{
+		cfg: &config.Config{
+			Packages: []config.Package{{ID: "p1", Phase: 2}, {ID: "p2", Phase: 2}},
+		},
+		selectedIDs: map[string]bool{"p1": true},
+	}
+	if got := r.countItemsInPhase(2); got != 1 {
+		t.Errorf("countItemsInPhase with selectedIDs: expected 1, got %d", got)
+	}
+}
+
 func TestSetSelectedIDsFiltersCount(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{

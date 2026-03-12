@@ -136,6 +136,28 @@ func (r *Runner) countItemsFromPhase(fromPhase int) int {
 	return count
 }
 
+// countItemsInPhase returns the total number of items in exactly phase n.
+// Used to drive the [N/Total] progress counter when --phase is set.
+func (r *Runner) countItemsInPhase(n int) int {
+	count := 0
+	for _, p := range r.cfg.Packages {
+		if p.Phase == n && (r.selectedIDs == nil || r.selectedIDs[p.ID]) {
+			count++
+		}
+	}
+	for _, c := range r.cfg.Commands {
+		if c.Phase == n && (r.selectedIDs == nil || r.selectedIDs[c.ID]) {
+			count++
+		}
+	}
+	for _, e := range r.cfg.Extensions {
+		if e.Phase == n && (r.selectedIDs == nil || r.selectedIDs[e.ID]) {
+			count++
+		}
+	}
+	return count
+}
+
 // Run executes all phases in order.
 func (r *Runner) Run() {
 	r.totalItems = r.countItemsFromPhase(r.resumePhase)
