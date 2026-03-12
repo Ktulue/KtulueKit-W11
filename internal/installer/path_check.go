@@ -7,6 +7,12 @@ import "os/exec"
 // and to be depended on by Tier 2 commands.
 var runtimeTools = []string{"git", "node", "python", "go", "rustup", "pwsh"}
 
+// RuntimeTools returns the fixed list of tools checked by VerifyRuntimePaths.
+// Exported so callers can compute the present set without re-running LookPath.
+func RuntimeTools() []string {
+	return append([]string(nil), runtimeTools...)
+}
+
 // VerifyRuntimePaths checks whether each required runtime tool is findable on PATH.
 // Returns a slice of tool names that are missing. An empty slice means all are present.
 func VerifyRuntimePaths() []string {
