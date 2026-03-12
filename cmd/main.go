@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -171,15 +173,18 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		r.SetSelectedIDs(remaining)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	runStart := time.Now()
-	r.Run()
+	r.Run(ctx)
 
 	rep.Summary()
 	fmt.Printf("Total elapsed: %s\n", time.Since(runStart).Round(time.Second))
 
-	// Only clear state on a fully clean run. If anything failed or was skipped,
-	// preserve state so --resume-phase re-runs know what already succeeded.
-	if !dryRun && !rep.HasFailures() {
+	// Only clear state on a fully clean, complete run.
+	// Preserve state if there were failures OR if the run was interrupted early.
+	if !dryRun && !rep.HasFailures() && !r.WasInterrupted() {
 		_ = state.Clear()
 	}
 

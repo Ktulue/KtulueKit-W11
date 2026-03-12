@@ -187,7 +187,7 @@ func (r *Runner) countItemsInPhase(n int) int {
 }
 
 // Run executes all phases in order.
-func (r *Runner) Run() {
+func (r *Runner) Run(ctx context.Context) {
 	if r.onlyPhase > 0 {
 		r.totalItems = r.countItemsInPhase(r.onlyPhase)
 	} else {
@@ -252,9 +252,9 @@ func (r *Runner) Run() {
 			pathRefreshed = true
 		}
 
-		r.runPackagesInPhase(context.Background(), phase)    // TODO(Task 7): replace with real ctx
-		r.runCommandsInPhase(context.Background(), phase)    // TODO(Task 7): replace with real ctx
-		r.runExtensionsInPhase(context.Background(), phase)  // TODO(Task 7): replace with real ctx
+		r.runPackagesInPhase(ctx, phase)
+		r.runCommandsInPhase(ctx, phase)
+		r.runExtensionsInPhase(ctx, phase)
 	}
 
 	// Play a completion beep (skipped in dry-run).
