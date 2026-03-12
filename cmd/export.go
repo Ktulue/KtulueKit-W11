@@ -78,8 +78,9 @@ func runExport(_ *cobra.Command, _ []string) error {
 
 	if exportFast {
 		// Fast mode: use the state file instead of running check commands.
-		if _, err := os.Stat(state.StatePath()); err != nil {
-			return fmt.Errorf("--fast requires a state file at %s (not found): %w", state.StatePath(), err)
+		sp := state.StatePath()
+		if _, err := os.Stat(sp); err != nil {
+			return fmt.Errorf("--fast requires a state file at %s (not found): %w", sp, err)
 		}
 		s, err := state.Load()
 		if err != nil {
@@ -118,16 +119,34 @@ func runExport(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("export error: %w", err)
 	}
 
+	// Ensure nil slices marshal as [] rather than null for snapshot consumers.
+	pkgs := result.Packages
+	if pkgs == nil {
+		pkgs = []config.Package{}
+	}
+	cmds := result.Commands
+	if cmds == nil {
+		cmds = []config.Command{}
+	}
+	exts := result.Extensions
+	if exts == nil {
+		exts = []config.Extension{}
+	}
+	profiles := result.Profiles
+	if profiles == nil {
+		profiles = []config.Profile{}
+	}
+
 	// Build output struct.
 	snap := snapshotFile{
 		Version:    cfg.Version,
 		Snapshot:   result.Snapshot,
 		Metadata:   cfg.Metadata,
 		Settings:   cfg.Settings,
-		Packages:   result.Packages,
-		Commands:   result.Commands,
-		Extensions: result.Extensions,
-		Profiles:   result.Profiles,
+		Packages:   pkgs,
+		Commands:   cmds,
+		Extensions: exts,
+		Profiles:   profiles,
 	}
 
 	// Marshal and write.
@@ -138,7 +157,7 @@ func runExport(_ *cobra.Command, _ []string) error {
 	data = append(data, '\n')
 
 	if err := os.WriteFile(outPath, data, 0644); err != nil {
-		return fmt.Errorf("write error: %w", err)
+		return fmt.Errorf("write error (%s): %w", outPath, err)
 	}
 
 	// Print summary.
