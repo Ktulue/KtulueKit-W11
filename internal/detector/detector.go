@@ -131,3 +131,21 @@ func runCheckSilent(checkCmd string) bool {
 	}
 	return err == nil
 }
+
+// RunCheckDetailed runs a check command and returns whether it passed and
+// whether it timed out. timedOut implies installed==false.
+// Uses the same 15-second timeout as runCheckSilent.
+func RunCheckDetailed(checkCmd string) (installed, timedOut bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), checkTimeoutSeconds*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "cmd", "/C", checkCmd)
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	err := cmd.Run()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return false, true
+	}
+	return err == nil, false
+}

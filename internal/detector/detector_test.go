@@ -272,3 +272,26 @@ func TestCheckAll_AppliesStateAwareSkipPerItem(t *testing.T) {
 		t.Errorf("expected results[1].Status StatusUnknown, got %v", results[1].Status)
 	}
 }
+
+// --- RunCheckDetailed tests ---
+// These run real shell commands on Windows cmd.exe.
+
+func TestRunCheckDetailed_ExitZero_ReturnsInstalled(t *testing.T) {
+	installed, timedOut := detector.RunCheckDetailed("echo hi")
+	if !installed {
+		t.Error("expected installed=true for exit-0 command")
+	}
+	if timedOut {
+		t.Error("expected timedOut=false for fast command")
+	}
+}
+
+func TestRunCheckDetailed_ExitNonZero_ReturnsAbsent(t *testing.T) {
+	installed, timedOut := detector.RunCheckDetailed("exit 1")
+	if installed {
+		t.Error("expected installed=false for non-zero exit")
+	}
+	if timedOut {
+		t.Error("expected timedOut=false — non-zero exit is not a timeout")
+	}
+}
