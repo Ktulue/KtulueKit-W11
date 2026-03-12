@@ -94,6 +94,30 @@ func TestPhaseFlagsError_ResumePhaseOnly(t *testing.T) {
 	}
 }
 
+func TestUpgradeOnlyFlagsError_BothSet(t *testing.T) {
+	if err := upgradeOnlyFlagsError(true, true); err == nil {
+		t.Fatal("expected error when --upgrade-only and --no-upgrade are both set, got nil")
+	}
+}
+
+func TestUpgradeOnlyFlagsError_UpgradeOnlyOnly(t *testing.T) {
+	if err := upgradeOnlyFlagsError(true, false); err != nil {
+		t.Fatalf("expected no error when only --upgrade-only is set, got %v", err)
+	}
+}
+
+func TestUpgradeOnlyFlagsError_NoUpgradeOnly(t *testing.T) {
+	if err := upgradeOnlyFlagsError(false, true); err != nil {
+		t.Fatalf("expected no error when only --no-upgrade is set, got %v", err)
+	}
+}
+
+func TestUpgradeOnlyFlagsError_NeitherSet(t *testing.T) {
+	if err := upgradeOnlyFlagsError(false, false); err != nil {
+		t.Fatalf("expected no error when neither flag is set, got %v", err)
+	}
+}
+
 func TestAllConfigIDs_ExcludeFiltering(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{{ID: "Git.Git"}, {ID: "7zip.7zip"}},
