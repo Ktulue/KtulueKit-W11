@@ -73,6 +73,21 @@ Windows 11 software stack in dependency order across three tiers:
 	}
 	root.AddCommand(listCmd)
 
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Scan machine and write a replay-ready ktuluekit-snapshot.json",
+		Long: `Export scans the current machine against the reference config.
+Items whose check command passes are included in the snapshot.
+The snapshot is a valid ktuluekit.json (replay on a new machine)
+and the handoff artifact for KtulueKit-Migration.
+
+Use --fast to skip check commands and use the KtulueKit state file instead.`,
+		RunE: runExport,
+	}
+	exportCmd.Flags().StringVarP(&exportOutput, "output", "o", "", "Output path (default: ktuluekit-snapshot.json in cwd)")
+	exportCmd.Flags().BoolVar(&exportFast, "fast", false, "Use state file instead of running check commands")
+	root.AddCommand(exportCmd)
+
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
