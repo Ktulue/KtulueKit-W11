@@ -184,6 +184,42 @@ func TestConsecutiveFailures_SkipsCountAsFails(t *testing.T) {
 	}
 }
 
+func TestPhaseHeader_Format(t *testing.T) {
+	got := phaseHeader(2, 2, 4)
+	// 26 trailing dashes — must match the format string in phaseHeader exactly.
+	want := "\n── Phase 2 | [2 of 4] ──────────────────────────────"
+	if got != want {
+		t.Errorf("phaseHeader(2,2,4):\n  got:  %q\n  want: %q", got, want)
+	}
+}
+
+func TestSetOnlyPhase_TotalItemsReflectsOnlyPhase(t *testing.T) {
+	cfg := &config.Config{
+		Packages: []config.Package{
+			{ID: "p1", Name: "P1", Phase: 1},
+			{ID: "p2", Name: "P2", Phase: 2},
+			{ID: "p3", Name: "P3", Phase: 2},
+		},
+		Commands:   []config.Command{},
+		Extensions: []config.Extension{},
+	}
+	rep, _ := reporter.New(t.TempDir())
+	defer rep.Close()
+	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
+
+	r := New(cfg, rep, s, false, 1, "", 0)
+	r.SetOnlyPhase(2)
+
+	// countItemsInPhase(2) should return 2 (p2 + p3 only)
+	if got := r.countItemsInPhase(2); got != 2 {
+		t.Errorf("countItemsInPhase(2) with onlyPhase=2: expected 2, got %d", got)
+	}
+	// countItemsInPhase(1) should return 1 (only p1)
+	if got := r.countItemsInPhase(1); got != 1 {
+		t.Errorf("countItemsInPhase(1): expected 1, got %d", got)
+	}
+}
+
 func TestConsecutiveFailures_StateAwareSkipNeutral(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{{ID: "already-done", Name: "Already Done", Phase: 1, Scope: "machine", TimeoutSeconds: 300}},

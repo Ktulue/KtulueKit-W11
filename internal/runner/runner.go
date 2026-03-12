@@ -56,6 +56,7 @@ type Runner struct {
 	totalItems     int                  // total items in phases >= resumePhase
 	itemIdx        int                  // current item index (1-based, increments each item)
 	selectedIDs    map[string]bool      // nil = run all (CLI mode); set by SetSelectedIDs
+	onlyPhase      int                  // 0 = run all phases; > 0 = run only this phase
 	onProgress     func(ProgressEvent)  // nil = print to stdout (CLI mode); set by SetOnProgress
 	rebootResponse chan bool             // nil = no reboot pending; set by SetRebootResponse
 	consecutiveFails int            // counts back-to-back StatusFailed or StatusSkipped results
@@ -87,6 +88,11 @@ func New(cfg *config.Config, rep *reporter.Reporter, s *state.State, dryRun bool
 // are silently skipped and not counted in totalItems. nil = run all (CLI mode).
 func (r *Runner) SetSelectedIDs(ids map[string]bool) {
 	r.selectedIDs = ids
+}
+
+// SetOnlyPhase restricts the run to a single phase. 0 = run all (default).
+func (r *Runner) SetOnlyPhase(n int) {
+	r.onlyPhase = n
 }
 
 // SetOnProgress wires a callback for live GUI progress events.
@@ -160,7 +166,11 @@ func (r *Runner) countItemsInPhase(n int) int {
 
 // Run executes all phases in order.
 func (r *Runner) Run() {
-	r.totalItems = r.countItemsFromPhase(r.resumePhase)
+	if r.onlyPhase > 0 {
+		r.totalItems = r.countItemsInPhase(r.onlyPhase)
+	} else {
+		r.totalItems = r.countItemsFromPhase(r.resumePhase)
+	}
 
 	// Fail fast if winget is missing or broken.
 	if !r.dryRun {
@@ -193,16 +203,25 @@ func (r *Runner) Run() {
 	}
 
 	phases := r.collectPhases()
+	phaseIdx := make(map[int]int, len(phases))
+	for i, p := range phases {
+		phaseIdx[p] = i + 1
+	}
 
 	pathRefreshed := false
 
 	for _, phase := range phases {
+		// --phase: skip non-matching phases silently (intentional — no log line,
+		// unlike the resumePhase skip below which does emit a log).
+		if r.onlyPhase > 0 && phase != r.onlyPhase {
+			continue
+		}
 		if phase < r.resumePhase {
 			fmt.Printf("\n── Phase %d: skipping (resuming from phase %d) ──\n", phase, r.resumePhase)
 			continue
 		}
 
-		fmt.Printf("\n── Phase %d ──────────────────────────────────────\n", phase)
+		fmt.Println(phaseHeader(phase, phaseIdx[phase], len(phases)))
 
 		// Refresh PATH once before the first command/extension phase
 		// (after all winget packages have had a chance to install)
@@ -242,6 +261,11 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	// Skip when an ID filter is active — the scan would cover all items but
 	// the phase loop will only run the filtered subset, giving misleading counts.
 	if r.selectedIDs != nil {
+		return false
+	}
+	// Skip the pre-run summary when --phase is set — the scan would cover all
+	// phases but only one will run, giving misleading counts.
+	if r.onlyPhase > 0 {
 		return false
 	}
 
@@ -713,6 +737,12 @@ func (r *Runner) collectPhases() []int {
 	}
 	sort.Ints(phases)
 	return phases
+}
+
+// phaseHeader returns the formatted phase separator line with position context.
+// e.g. "── Phase 2 | [2 of 4] ──────────────────────────────"
+func phaseHeader(phase, idx, total int) string {
+	return fmt.Sprintf("\n── Phase %d | [%d of %d] ──────────────────────────────", phase, idx, total)
 }
 
 // firstCommandPhase returns the lowest phase number that contains a Command or Extension.
