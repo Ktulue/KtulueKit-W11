@@ -93,11 +93,11 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Graceful Ctrl+C handling** — Trap SIGINT, save state for the current item, print a clean exit message. Prevents state corruption on interrupt.
 
-- [ ] **PATH verification post-install** — After all runtimes install, scan for `git`, `node`, `python`, `go`, `rustup`, `pwsh` on PATH. Report gaps explicitly before entering command phases.
+- [x] **PATH verification post-install** — After all runtimes install, scan for `git`, `node`, `python`, `go`, `rustup`, `pwsh` on PATH. Report gaps explicitly before entering command phases.
 
 - [ ] **Post-install hooks** — Add optional `post_install` command field to Package struct. Runs after successful install (e.g., set a default registry key after an app installs, run a one-time setup command). Not for migrating user data — that's KtulueKit-Migration.
 
-- [ ] **State file relocation** — Move `.ktuluekit-state.json` from CWD to `%LOCALAPPDATA%\KtulueKit\state.json` for reliable discovery regardless of working directory.
+- [x] **State file relocation** — Move `.ktuluekit-state.json` from CWD to `%LOCALAPPDATA%\KtulueKit\state.json` for reliable discovery regardless of working directory.
 
 ---
 
