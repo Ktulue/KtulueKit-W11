@@ -198,6 +198,6 @@ See `KtulueKit-Project-Document.md` for the full list of design constraints and 
 
 ## Support
 
-☕ Buy me a coffee on Ko-fi
+☕ [Buy me a coffee on Ko-fi](http://ko-fi.com/ktulue)
 
 Created by Ktulue | The Water Father 🌊
