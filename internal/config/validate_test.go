@@ -190,3 +190,80 @@ func TestValidate_ExtensionEmptyExtensionID(t *testing.T) {
 		t.Fatal("want error for empty extension_id")
 	}
 }
+
+// --- Scrape-type command validation ---
+
+func validScrapeCmd() Command {
+	return Command{
+		ID:         "tool",
+		Name:       "Tool",
+		Phase:      1,
+		Check:      "echo skip",
+		ScrapeURL:  "https://example.com/download",
+		URLPattern: `https://example\.com/files/tool-[\d]+\.exe`,
+	}
+}
+
+func TestValidate_ScrapeCmd_Valid(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{validScrapeCmd()}
+	errs := Validate(c)
+	if len(errs) != 0 {
+		t.Errorf("valid scrape command: want 0 errors, got %+v", errs)
+	}
+}
+
+func TestValidate_ScrapeCmd_ValidWithInstallArgs(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	cmd := validScrapeCmd()
+	cmd.InstallArgs = "/S"
+	c.Commands = []Command{cmd}
+	errs := Validate(c)
+	if len(errs) != 0 {
+		t.Errorf("scrape command with install_args: want 0 errors, got %+v", errs)
+	}
+}
+
+func TestValidate_ScrapeCmd_MissingBoth(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{{ID: "c1", Name: "C1", Phase: 1, Check: "echo skip"}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error when neither command nor scrape_url+url_pattern is set")
+	}
+}
+
+func TestValidate_ScrapeCmd_HasBothCmdAndScrape(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	cmd := validScrapeCmd()
+	cmd.Cmd = "echo hi"
+	c.Commands = []Command{cmd}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error when both command and scrape_url are set")
+	}
+}
+
+func TestValidate_ScrapeCmd_MissingScrapeURL(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{{
+		ID: "c1", Name: "C1", Phase: 1, Check: "echo skip",
+		URLPattern: `https://example\.com/files/tool\.exe`,
+	}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error when url_pattern is set but scrape_url is missing")
+	}
+}
+
+func TestValidate_ScrapeCmd_MissingURLPattern(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Commands = []Command{{
+		ID: "c1", Name: "C1", Phase: 1, Check: "echo skip",
+		ScrapeURL: "https://example.com/download",
+	}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error when scrape_url is set but url_pattern is missing")
+	}
+}
