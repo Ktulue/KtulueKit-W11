@@ -32,6 +32,12 @@ func RefreshPath() {
 
 // RunCommand executes a Tier 2 shell command, checking if it's already done first.
 func RunCommand(cmd config.Command, dryRun bool, retryCount int, s *state.State) reporter.Result {
+	// Scrape-download path — handles dry-run and already-installed internally.
+	// Must be first: this branch fires before the dryRun early-return below.
+	if cmd.ScrapeURL != "" {
+		return ScrapeAndInstall(cmd, dryRun)
+	}
+
 	res := reporter.Result{
 		ID:   cmd.ID,
 		Name: cmd.Name,

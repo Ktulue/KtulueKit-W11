@@ -184,7 +184,7 @@
 
     "Command": {
       "type": "object",
-      "required": ["id", "name", "phase", "check", "command"],
+      "required": ["id", "name", "phase", "check"],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -242,6 +242,18 @@
         "notes": {
           "type": "string",
           "description": "Shown in dry-run output and logs."
+        },
+        "scrape_url": {
+          "type": "string",
+          "description": "Page URL to fetch HTML from to find the download link. Mutually exclusive with 'command'."
+        },
+        "url_pattern": {
+          "type": "string",
+          "description": "Go regex pattern to extract the download URL from the page HTML. Required when scrape_url is set."
+        },
+        "install_args": {
+          "type": "string",
+          "description": "Space-separated CLI flags for the installer (e.g. /S for silent NSIS). Simple flags only — no quoted tokens with spaces."
         }
       }
     },

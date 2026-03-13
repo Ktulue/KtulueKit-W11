@@ -69,8 +69,23 @@ func Validate(cfg *Config) []ValidationError {
 		if c.Check == "" {
 			add(fmt.Sprintf("%s(%s).check", prefix, c.ID), "required field 'check' is missing")
 		}
-		if c.Cmd == "" {
-			add(fmt.Sprintf("%s(%s).command", prefix, c.ID), "required field 'command' is missing")
+		hasCmd := c.Cmd != ""
+		hasBothScrape := c.ScrapeURL != "" && c.URLPattern != ""
+		hasAnyScrape := c.ScrapeURL != "" || c.URLPattern != ""
+		switch {
+		case !hasAnyScrape && !hasCmd:
+			// Neither command nor scrape fields — entry is incomplete.
+			add(fmt.Sprintf("%s(%s).command", prefix, c.ID),
+				"must have either 'command' or both 'scrape_url' and 'url_pattern'")
+		case hasAnyScrape && hasCmd:
+			// Has command AND at least one scrape field — mutually exclusive.
+			add(fmt.Sprintf("%s(%s).command", prefix, c.ID),
+				"cannot have both 'command' and 'scrape_url'/'url_pattern'")
+		case hasAnyScrape && !hasBothScrape:
+			// Has one scrape field but not both — partial scrape entry.
+			add(fmt.Sprintf("%s(%s).scrape_url", prefix, c.ID),
+				"scrape-type entries must have both 'scrape_url' and 'url_pattern'")
+		// else: valid standard command or valid scrape command — no error.
 		}
 		if ids[c.ID] {
 			add(fmt.Sprintf("%s.id", prefix), fmt.Sprintf("duplicate ID %q", c.ID))

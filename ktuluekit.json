@@ -497,10 +497,12 @@
       "name": "Plexamp",
       "phase": 5,
       "category": "Media & Music",
-      "description": "Opens the Plexamp download page. Beautiful music player for your Plex library.",
-      "check": "echo skip",
-      "command": "start https://www.plex.tv/plexamp",
-      "notes": "Direct download from plex.tv."
+      "description": "Beautiful music player for your Plex library.",
+      "check": "winget list --name \"Plexamp\" -e --accept-source-agreements",
+      "scrape_url": "https://www.plex.tv/media-server-downloads/",
+      "url_pattern": "https://plexamp\\.plex\\.tv/plexamp\\.plex\\.tv/desktop/Plexamp%20Setup%20[\\d\\.]+\\.exe",
+      "install_args": "--silent",
+      "notes": "Not on winget. Scraped from plex.tv/media-server-downloads. Electron/Squirrel — --silent flag may need verification on first run."
     },
     {
       "id": "hype-control",
@@ -535,6 +537,18 @@
       "notes": "Requires Python and Git. Clones repo and runs install.sh via bash. Falls back to manual guidance if it fails."
     },
     {
+      "id": "frame0",
+      "name": "Frame0",
+      "phase": 5,
+      "category": "Dev Tools",
+      "description": "UI template design and wireframing tool.",
+      "check": "winget list --name \"Frame0\" -e --accept-source-agreements",
+      "scrape_url": "https://frame0.app/download",
+      "url_pattern": "https://files\\.frame0\\.app/releases/win32/x64/Frame0-[\\d\\.]+ Setup\\.exe",
+      "install_args": "/S",
+      "notes": "Not on winget. Scraped from frame0.app/download. NSIS installer — /S for silent."
+    },
+    {
       "id": "dragonruby-control",
       "name": "DragonRuby Control",
       "phase": 5,
@@ -560,10 +574,12 @@
       "name": "Streamer.bot",
       "phase": 3,
       "category": "Streaming",
-      "description": "Tracks Streamer.bot in desired state. Download manually from streamer.bot.",
-      "check": "echo skip",
-      "command": "echo Already installed — no automated installer",
-      "notes": "Streamer.bot automation software. Tracks desired state in summary only. Download: https://streamer.bot"
+      "description": "Automation software for streamers. Integrates with OBS, Twitch, and more.",
+      "check": "winget list --name \"Streamer.bot\" -e --accept-source-agreements",
+      "scrape_url": "https://streamer.bot",
+      "url_pattern": "https://streamer\\.bot/api/releases/streamer\\.bot/[\\d\\.]+/download",
+      "install_args": "",
+      "notes": "Not on winget. Scraped from streamer.bot. Silent install flag unknown — leave install_args empty; update after testing without a rebuild."
     },
     {
       "id": "davinci-resolve",
@@ -813,7 +829,7 @@
         "GitHub.cli", "Anthropic.Claude", "Pencil.Desktop",
         "claude-code", "nerd-fonts-cascadia", "wsl2-ubuntu",
         "dragonruby", "meshmixer", "aseprite", "plexamp", "hype-control",
-        "claude-ruby-marketplace", "peon-ping", "dragonruby-control",
+        "claude-ruby-marketplace", "peon-ping", "frame0", "dragonruby-control",
         "stream-deck", "streamerbot", "davinci-resolve",
         "git-config-editor", "git-config-credential", "ps-profile-omp", "wt-font-config",
         "npm-typescript", "npm-prettier", "pip-pipx", "pip-black", "pip-ruff",
@@ -829,7 +845,7 @@
         "OpenJS.NodeJS.LTS", "Python.Python.3.12", "Rustlang.Rustup", "GoLang.Go",
         "dbeaver.dbeaver", "Microsoft.VisualStudioCode", "Atlassian.Sourcetree", "Postman.Postman",
         "GitHub.cli", "JanDeDobbeleer.OhMyPosh", "Anthropic.Claude", "Pencil.Desktop",
-        "claude-code", "nerd-fonts-cascadia", "wsl2-ubuntu",
+        "claude-code", "nerd-fonts-cascadia", "wsl2-ubuntu", "frame0",
         "git-config-editor", "git-config-credential", "ps-profile-omp", "wt-font-config",
         "npm-typescript", "npm-prettier", "pip-pipx", "pip-black", "pip-ruff",
         "vscode-ext-go", "vscode-ext-python", "vscode-ext-eslint",
