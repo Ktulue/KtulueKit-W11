@@ -193,3 +193,11 @@ See `KtulueKit-Project-Document.md` for the full list of design constraints and 
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Support
+
+☕ Buy me a coffee on Ko-fi
+
+Created by Ktulue | The Water Father 🌊

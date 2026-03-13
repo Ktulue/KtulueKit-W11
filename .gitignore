@@ -1,6 +1,7 @@
 # Compiled binary
 ktuluekit.exe
 ktuluekit
+cmd.exe
 
 # Build output
 /dist/
