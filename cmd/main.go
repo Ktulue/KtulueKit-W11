@@ -346,7 +346,14 @@ func resolveConfigPaths(paths []string) (resolved []string, cleanup func(), err 
 
 // httpClient is the HTTP client used by fetchToTemp. Tests may replace this
 // to inject a custom transport (e.g., httptest.Server.Client()).
-var httpClient = &http.Client{}
+var httpClient = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return fmt.Errorf("redirect to non-https URL rejected: %s", req.URL)
+		}
+		return nil
+	},
+}
 
 const (
 	fetchTimeout  = 15 * time.Second

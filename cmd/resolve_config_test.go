@@ -271,6 +271,40 @@ func TestRunValidate_WithLocalConfigPath(t *testing.T) {
 	}
 }
 
+// TestFetchToTemp_RedirectToHTTPRejected verifies that a 301 redirect from an
+// https:// server to an http:// target is rejected with an error mentioning
+// "non-https". This guards against redirect-based TLS stripping attacks.
+func TestFetchToTemp_RedirectToHTTPRejected(t *testing.T) {
+	// target: plain HTTP server that would return a valid JSON body if reached.
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"packages":[],"commands":[],"extensions":[]}`)
+	}))
+	defer target.Close()
+
+	// redirector: TLS server that redirects to the plain-HTTP target.
+	redirector := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL, http.StatusMovedPermanently)
+	}))
+	defer redirector.Close()
+
+	// Build a client that trusts the TLS redirector's self-signed cert AND
+	// keeps the CheckRedirect policy from our package-level httpClient.
+	testClient := redirector.Client()
+	testClient.CheckRedirect = httpClient.CheckRedirect
+
+	origClient := httpClient
+	httpClient = testClient
+	defer func() { httpClient = origClient }()
+
+	_, err := fetchToTemp(redirector.URL)
+	if err == nil {
+		t.Fatal("expected error for redirect to http://, got nil")
+	}
+	if !containsAll(err.Error(), "non-https") {
+		t.Errorf("expected error to mention \"non-https\", got: %v", err)
+	}
+}
+
 // containsAll is a test helper that checks all substrings appear in s.
 func containsAll(s string, substrings ...string) bool {
 	for _, sub := range substrings {
