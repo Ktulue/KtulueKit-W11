@@ -31,6 +31,17 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("state error: %w", err)
 	}
 
+	if profileName != "" {
+		if err := profileFlagsError(profileName, onlyIDs); err != nil {
+			return err
+		}
+		ids, err := config.LookupProfile(cfg, profileName)
+		if err != nil {
+			return err
+		}
+		filterConfigByIDs(cfg, ids)
+	}
+
 	fmt.Printf("KtulueKit Status — %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	items := detector.FlattenItems(cfg)
