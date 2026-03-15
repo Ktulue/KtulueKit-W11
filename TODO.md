@@ -131,7 +131,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [ ] **Parallel installs** — Run independent packages within the same phase concurrently. Requires careful stdout multiplexing and state locking. Biggest risk: winget itself may not handle concurrent installs gracefully.
 
-- [ ] **Uninstall / desired-state enforcement** *(high scrutiny — destructive)* — `ktuluekit uninstall` or `--enforce` mode. Scans installed packages against the config/selection and removes anything marked as desired-absent. Key design constraints:
+- [x] **Uninstall / desired-state enforcement** *(high scrutiny — destructive)* — `ktuluekit uninstall` or `--enforce` mode. Scans installed packages against the config/selection and removes anything marked as desired-absent. Key design constraints:
   - Requires an explicit "desired absent" signal — "not selected" ≠ "uninstall." Needs a dedicated flag (`--enforce`) or per-item `"uninstall": true` field to avoid accidental removal.
   - **Reverse-phase uninstall order** — uninstall in reverse phase order so dependents are removed before their dependencies.
   - **Dependency warnings** — if item B depends on item A and only A is being uninstalled, warn the user before proceeding.

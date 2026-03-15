@@ -1,51 +1,57 @@
 # Scope Contract
-**Task:** Config URL — remote config fetch via --config https://
-**Plan:** `docs/superpowers/plans/2026-03-14-config-url.md`
-**Date:** 2026-03-14
-**Status:** ACTIVE
+**Task:** Add config-scoped uninstall (CLI + GUI tabs) | **Plan:** `docs/superpowers/plans/2026-03-14-uninstall.md` | **Date:** 2026-03-14 | **Status:** ACTIVE
 
 ## In Scope
 
-### Files
-| File | Change |
-|------|--------|
-| `cmd/main.go` | Add `resolveConfigPaths()`, `fetchToTemp()`, `httpClient` var, constants; wire into `runInstall()` |
-| `cmd/status.go` | Wire `resolveConfigPaths` before `config.LoadAll` |
-| `cmd/validate.go` | Wire `resolveConfigPaths` before `config.LoadAll` |
-| `cmd/list.go` | Wire `resolveConfigPaths` before `config.LoadAll` |
-| `cmd/export.go` | Wire `resolveConfigPaths` before `config.LoadAll` (uses local `paths` var) |
-| `cmd/resolve_config_test.go` | **New file** — all tests for `resolveConfigPaths` and `fetchToTemp` |
-| `TODO.md` | Mark remote config URL item done |
+- **Files:**
+  - `internal/config/schema.go` — add `UninstallCmd string` to `Command`
+  - `internal/config/schema_test.go` — 2 round-trip tests
+  - `internal/state/state.go` — add `DeleteSucceeded(id string)`
+  - `internal/state/state_test.go` — 2 tests
+  - `internal/installer/winget.go` — add `UninstallPackage()`
+  - `internal/installer/winget_test.go` — dry-run and skip tests
+  - `internal/installer/command.go` — add `RunUninstallCommand()`
+  - `internal/installer/command_test.go` — 3 tests
+  - `internal/installer/extension.go` — add `UninstallExtension()`; add `"sort"` import
+  - `internal/installer/extension_test.go` — 2 tests
+  - `internal/runner/runner.go` — add `RunUninstall()` method
+  - `cmd/uninstall.go` — new file, `uninstall` cobra subcommand
+  - `cmd/uninstall_test.go` — 4 tests for `buildUninstallList`
+  - `cmd/main.go` — add `root.AddCommand(uninstallCmd)` (plan says "no changes" but local `root` var requires it)
+  - `cmd/helpers.go` — add `resolveFilter`, `parseIDList`, `buildSelectedMap` helpers (plan provides inline fallbacks; helpers.go is their natural home)
+  - `app.go` — fix `SetPauseResponse` latent bug in `StartInstall`; add `StartUninstall()` and `GetInstalledItems()`
+  - `frontend/src/screens/SelectionScreen.svelte` — Install/Uninstall tab bar, scan logic, uninstall trigger
+  - `frontend/src/components/ItemRow.svelte` — add `mode` prop for accent color switching
+  - `TODO.md` — mark uninstall items done
 
-### Features / Acceptance Criteria
-- `resolveConfigPaths(paths []string) (resolved []string, cleanup func(), err error)` in `cmd/main.go`
-- `http://` URLs rejected immediately with clear error mentioning `https://`
-- Local paths passed through unchanged; empty/nil input returns empty list
-- `fetchToTemp(url string) (string, error)` — 15s timeout, 1 MiB cap, non-200 rejected
-- `var httpClient = &http.Client{}` — tests can swap to trust test TLS cert
-- `fetchMaxBytes` and `fetchTimeout` constants
-- Cleanup func always non-nil; removes all temp files
-- Wired into all 5 subcommand handlers; display paths remain `configPaths` (not resolved) for readability
-- `config` package unchanged — no `net/http` dependency added there
-- All tests pass; `go build ./...` clean
+- **Features / Criteria:**
+  - `UninstallCmd` schema field on `config.Command`
+  - `state.DeleteSucceeded()` removes ID and persists
+  - `UninstallPackage`: winget uninstall, dry-run, check-based skip
+  - `RunUninstallCommand`: T4/scrape-URL skip, no-uninstall-cmd skip, dry-run, shell run
+  - `UninstallExtension`: url-mode skip, force-mode registry removal + renumber
+  - `runner.RunUninstall()`: flat iteration (not phase-based), per-tier dispatch, state clearing on success
+  - `ktuluekit uninstall` CLI with `--only`, `--exclude`, `--profile`, `--dry-run`, confirmation gate, non-TTY auto-continue
+  - `App.StartUninstall()` + `App.GetInstalledItems()` Wails bindings
+  - Install/Uninstall tab bar in SelectionScreen
 
-### Explicit Boundaries
-- `config` package is **not touched** — URL handling lives entirely in `cmd` layer
-- No host allowlist, no checksum verification — deliberate for personal tool
-- No `http://` → redirect-to-https behaviour — explicit rejection only
-- Display paths (for headers/metadata) use original `configPaths`, not resolved temp paths
-- `app.go` (Wails GUI entry) is **not touched** — GUI doesn't expose `--config` flags
+- **Explicit Boundaries (plan corrections pre-approved):**
+  - `reporter.New` calls must include `io.Writer` second arg (plan omits it; already fixed in codebase)
+  - `rep.Summary()` not `rep.PrintSummary()` (plan typo)
+  - Package-level var is `profileName` not `profileFlag`
+  - `rootCmd.AddCommand` in `init()` won't work — use `root.AddCommand(uninstallCmd)` in `main()` instead
+  - `config.Load` (single file) used in app.go — matches plan's `StartUninstall` code
 
 ## Out of Scope
-- Any changes to `internal/config` package
-- `app.go` / GUI changes
-- Checksum or host allowlist
-- Redirect support for http:// URLs
-- Any other subcommand or runner changes
+- Parallel uninstall
+- Uninstall for T4 (scrape-download) items — always skipped by design
+- Atomic registry renumber for extension uninstall — non-atomic/best-effort by design
+- Any other CLI subcommands or flags not listed above
+- Any refactoring of existing install code
 
 # Scope Change Log
 | # | Category | What | Why | Decision | Outcome |
 |---|----------|------|-----|----------|---------|
 
 # Follow-up Tasks
-_(none yet)_
+(none)
