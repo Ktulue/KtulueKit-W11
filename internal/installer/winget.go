@@ -182,6 +182,43 @@ func classifyWingetExit(code int, runErr error) (status, detail string) {
 	}
 }
 
+// UninstallPackage runs winget uninstall for a Tier 1 package.
+// If pkg.Check exits non-zero (not installed), returns StatusSkipped.
+// If pkg.Check is empty, runs unconditionally (winget handles "not found").
+func UninstallPackage(pkg config.Package, dryRun bool) reporter.Result {
+	res := reporter.Result{ID: pkg.ID, Name: pkg.Name, Tier: "winget"}
+
+	if dryRun {
+		res.Status = reporter.StatusDryRun
+		res.Detail = fmt.Sprintf("winget uninstall -e --id %s", pkg.ID)
+		return res
+	}
+
+	if pkg.Check != "" && !isAlreadyInstalled(pkg.Check) {
+		res.Status = reporter.StatusSkipped
+		res.Detail = "not detected as installed — skipping"
+		return res
+	}
+
+	args := []string{
+		"uninstall", "-e", "--id", pkg.ID,
+		"--accept-source-agreements", "--disable-interactivity",
+	}
+
+	exitCode, err := runWithTimeout(args, pkg.TimeoutSeconds)
+	res.ExitCode = exitCode
+	if exitCode == 0 && err == nil {
+		res.Status = reporter.StatusInstalled
+	} else {
+		res.Status = reporter.StatusFailed
+		res.Detail = fmt.Sprintf("exit code %d", exitCode)
+		if err != nil {
+			res.Detail += fmt.Sprintf(": %s", err.Error())
+		}
+	}
+	return res
+}
+
 // runWingetUpgrade attempts to upgrade an already-installed package.
 // Exit 0 → StatusUpgraded; "no update applicable" codes → StatusAlready; other failures → StatusFailed.
 func runWingetUpgrade(pkg config.Package, retryCount int) reporter.Result {

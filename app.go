@@ -10,6 +10,7 @@ import (
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
 	"github.com/Ktulue/KtulueKit-W11/internal/desktop"
+	"github.com/Ktulue/KtulueKit-W11/internal/detector"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
 	"github.com/Ktulue/KtulueKit-W11/internal/runner"
 	"github.com/Ktulue/KtulueKit-W11/internal/scheduler"
@@ -172,6 +173,8 @@ func (a *App) StartInstall(ids []string) string {
 		}
 		r.SetSelectedIDs(selectedMap)
 		r.SetRebootResponse(rebootCh)
+		pauseCh := make(chan bool, 1)
+		r.SetPauseResponse(pauseCh)
 		r.SetOnProgress(func(e runner.ProgressEvent) {
 			runtime.EventsEmit(a.ctx, "progress", e)
 		})
@@ -221,4 +224,108 @@ func (a *App) CancelReboot() {
 	if ch != nil {
 		ch <- false
 	}
+}
+
+// StartUninstall uninstalls the given item IDs using runner.RunUninstall.
+// Returns an error message string on validation failure, or "" on success.
+func (a *App) StartUninstall(ids []string) string {
+	if len(ids) == 0 {
+		return "No items selected."
+	}
+	a.mu.Lock()
+	if a.running {
+		a.mu.Unlock()
+		return "An operation is already in progress."
+	}
+	a.running = true
+	a.mu.Unlock()
+
+	go func() {
+		defer func() {
+			a.mu.Lock()
+			a.running = false
+			a.mu.Unlock()
+		}()
+
+		cfg, err := config.Load(a.configPath)
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "uninstall_complete", SummaryResult{
+				Failed: []string{fmt.Sprintf("Failed to load config: %v", err)},
+			})
+			return
+		}
+		rep, err := reporter.New(cfg.Settings.LogDir, os.Stdout)
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "uninstall_complete", SummaryResult{
+				Failed: []string{fmt.Sprintf("Failed to create log: %v", err)},
+			})
+			return
+		}
+		defer rep.Close()
+		s, err := state.Load()
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "uninstall_complete", SummaryResult{
+				Failed:  []string{fmt.Sprintf("Failed to load state: %v", err)},
+				LogPath: rep.LogPath(),
+			})
+			return
+		}
+
+		r := runner.New(cfg, rep, s, false, 1, a.configPath, desktop.ShortcutRemove)
+		selectedMap := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			selectedMap[id] = true
+		}
+		r.SetSelectedIDs(selectedMap)
+		pauseCh := make(chan bool, 1)
+		r.SetPauseResponse(pauseCh)
+		r.SetOnProgress(func(e runner.ProgressEvent) {
+			runtime.EventsEmit(a.ctx, "progress", e)
+		})
+
+		runStart := time.Now()
+		r.RunUninstall(context.Background())
+		elapsed := time.Since(runStart).Round(time.Second).String()
+
+		summary := SummaryResult{
+			Installed:    rep.NamesBy("installed"),
+			Failed:       rep.NamesBy("failed"),
+			Skipped:      rep.NamesBy("skipped"),
+			TotalElapsed: elapsed,
+			LogPath:      rep.LogPath(),
+		}
+		runtime.EventsEmit(a.ctx, "uninstall_complete", summary)
+	}()
+
+	return ""
+}
+
+// GetInstalledItems runs detector checks for the given IDs and returns those
+// that are currently installed (detector check exits 0).
+func (a *App) GetInstalledItems(ids []string) []string {
+	cfg, err := config.Load(a.configPath)
+	if err != nil {
+		return nil
+	}
+	checkCmds := make(map[string]string)
+	for _, p := range cfg.Packages {
+		checkCmds[p.ID] = p.Check
+	}
+	for _, c := range cfg.Commands {
+		checkCmds[c.ID] = c.Check
+	}
+	// Extensions have no Check field — excluded here.
+	// GUI scan will not show extensions in the uninstall list.
+
+	var installed []string
+	for _, id := range ids {
+		check := checkCmds[id]
+		if check == "" {
+			continue
+		}
+		if isInstalled, _ := detector.RunCheckDetailed(check); isInstalled {
+			installed = append(installed, id)
+		}
+	}
+	return installed
 }

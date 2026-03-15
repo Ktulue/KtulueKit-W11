@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { GetConfig, StartInstall } from '../wailsjs/go/main/App'
+  import { GetConfig, StartInstall, StartUninstall, GetInstalledItems } from '../wailsjs/go/main/App'
   import { EventsOn } from '../wailsjs/runtime/runtime'
   import SelectionScreen from './screens/SelectionScreen.svelte'
   import ProgressScreen from './screens/ProgressScreen.svelte'
@@ -24,6 +24,11 @@
       summaryResult = result
       screen = 'summary'
     })
+
+    EventsOn('uninstall_complete', (result) => {
+      summaryResult = result
+      screen = 'summary'
+    })
   })
 
   async function handleStartInstall(selectedIds) {
@@ -34,6 +39,20 @@
       return
     }
     screen = 'progress'
+  }
+
+  async function handleStartUninstall(selectedIds) {
+    progressEvents = []
+    const err = await StartUninstall(selectedIds)
+    if (err) {
+      alert(err)
+      return
+    }
+    screen = 'progress'
+  }
+
+  async function handleGetInstalledItems(ids) {
+    return await GetInstalledItems(ids)
   }
 
   function handleClose() {
@@ -48,7 +67,12 @@
       <p>Right-click the .exe and choose "Run as administrator".</p>
     </div>
   {:else if screen === 'selection'}
-    <SelectionScreen {configView} onStart={handleStartInstall} />
+    <SelectionScreen
+      {configView}
+      onStart={handleStartInstall}
+      onUninstall={handleStartUninstall}
+      getInstalledItems={handleGetInstalledItems}
+    />
   {:else if screen === 'progress'}
     <ProgressScreen events={progressEvents} />
   {:else if screen === 'summary'}

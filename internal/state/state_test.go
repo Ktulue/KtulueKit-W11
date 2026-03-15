@@ -167,3 +167,56 @@ func TestStatePath_ReturnsNonEmptyString(t *testing.T) {
 		t.Error("StatePath() returned empty string")
 	}
 }
+
+func TestDeleteSucceeded_RemovesFromSucceededMap(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCALAPPDATA", dir)
+
+	s := &State{
+		Succeeded: map[string]bool{"Git.Git": true, "Steam.Steam": true},
+		Failed:    map[string]bool{"BadPkg": true},
+	}
+	if err := s.Save(); err != nil {
+		t.Fatalf("Save() error: %v", err)
+	}
+
+	s.DeleteSucceeded("Git.Git")
+
+	if s.Succeeded["Git.Git"] {
+		t.Error("Git.Git should have been removed from Succeeded")
+	}
+	if !s.Succeeded["Steam.Steam"] {
+		t.Error("Steam.Steam should still be in Succeeded")
+	}
+	if !s.Failed["BadPkg"] {
+		t.Error("Failed map should be unchanged")
+	}
+
+	s2, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	if s2.Succeeded["Git.Git"] {
+		t.Error("Git.Git should not appear in reloaded state")
+	}
+	if !s2.Succeeded["Steam.Steam"] {
+		t.Error("Steam.Steam should persist in reloaded state")
+	}
+}
+
+func TestDeleteSucceeded_NoopForUnknownID(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCALAPPDATA", dir)
+
+	s := &State{
+		Succeeded: map[string]bool{"A": true},
+		Failed:    map[string]bool{},
+	}
+	if err := s.Save(); err != nil {
+		t.Fatal(err)
+	}
+	s.DeleteSucceeded("DoesNotExist")
+	if !s.Succeeded["A"] {
+		t.Error("existing entry A should be unaffected")
+	}
+}

@@ -3,6 +3,7 @@ package installer
 import (
 	"fmt"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
@@ -118,6 +119,93 @@ func forceValue(browser, extensionID string) string {
 		return fmt.Sprintf("https://addons.mozilla.org/firefox/downloads/latest/%s/addon-latest.xpi", extensionID)
 	}
 	return fmt.Sprintf("%s;https://clients2.google.com/service/update2/crx", extensionID)
+}
+
+// UninstallExtension handles Tier 3 browser extension uninstall.
+// url-mode: skipped (not installed programmatically).
+// force-mode: removes registry value matching ext.ExtensionID and renumbers remaining.
+// Non-atomic; best-effort for personal tool.
+func UninstallExtension(ext config.Extension, dryRun bool) reporter.Result {
+	res := reporter.Result{ID: ext.ID, Name: ext.Name, Tier: "extension"}
+
+	if ext.Mode != "force" {
+		res.Status = reporter.StatusSkipped
+		res.Detail = "url-mode extensions are not installed programmatically — uninstall via browser"
+		return res
+	}
+
+	path, ok := browserPolicyPaths[ext.Browser]
+	if !ok {
+		res.Status = reporter.StatusFailed
+		res.Detail = fmt.Sprintf("unsupported browser: %s", ext.Browser)
+		return res
+	}
+
+	if dryRun {
+		res.Status = reporter.StatusDryRun
+		res.Detail = fmt.Sprintf("HKLM\\%s — remove value matching %s and renumber", path, ext.ExtensionID)
+		return res
+	}
+
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.ALL_ACCESS)
+	if err != nil {
+		res.Status = reporter.StatusFailed
+		res.Detail = fmt.Sprintf("cannot open registry key: %s", err)
+		return res
+	}
+	defer k.Close()
+
+	names, _ := k.ReadValueNames(-1)
+	var targetName string
+	for _, name := range names {
+		val, _, _ := k.GetStringValue(name)
+		if strings.HasPrefix(val, ext.ExtensionID) {
+			targetName = name
+			break
+		}
+	}
+	if targetName == "" {
+		res.Status = reporter.StatusSkipped
+		res.Detail = "extension value not found in registry — may already be removed"
+		return res
+	}
+
+	if err := k.DeleteValue(targetName); err != nil {
+		res.Status = reporter.StatusFailed
+		res.Detail = fmt.Sprintf("cannot delete registry value %q: %s", targetName, err)
+		return res
+	}
+
+	// Renumber remaining numeric values contiguously starting at 1.
+	remaining := make(map[string]string)
+	names, _ = k.ReadValueNames(-1)
+	for _, name := range names {
+		var n int
+		if _, err := fmt.Sscanf(name, "%d", &n); err == nil {
+			val, _, _ := k.GetStringValue(name)
+			remaining[name] = val
+		}
+	}
+	sortedNames := make([]string, 0, len(remaining))
+	for n := range remaining {
+		sortedNames = append(sortedNames, n)
+	}
+	sort.Slice(sortedNames, func(i, j int) bool {
+		var ni, nj int
+		fmt.Sscanf(sortedNames[i], "%d", &ni)
+		fmt.Sscanf(sortedNames[j], "%d", &nj)
+		return ni < nj
+	})
+	for _, name := range sortedNames {
+		_ = k.DeleteValue(name)
+	}
+	for i, name := range sortedNames {
+		_ = k.SetStringValue(fmt.Sprintf("%d", i+1), remaining[name])
+	}
+
+	res.Status = reporter.StatusInstalled
+	res.Detail = "registry policy value removed — browser restart required"
+	return res
 }
 
 // storeURL returns the browser-appropriate extension listing URL for url mode.

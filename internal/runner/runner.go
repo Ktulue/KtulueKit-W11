@@ -875,6 +875,101 @@ func (r *Runner) firstCommandPhase() int {
 	return min
 }
 
+// RunUninstall iterates all config items (flat, not phase-based), calls the appropriate
+// per-tier uninstall function, records results, and clears state on success.
+func (r *Runner) RunUninstall(ctx context.Context) {
+	// Build flat item list filtered by selectedIDs.
+	type flatItem struct {
+		id   string
+		name string
+		tier string // "winget" | "command" | "extension"
+	}
+	var items []flatItem
+	for _, pkg := range r.cfg.Packages {
+		if r.selectedIDs == nil || r.selectedIDs[pkg.ID] {
+			items = append(items, flatItem{pkg.ID, pkg.Name, "winget"})
+		}
+	}
+	for _, cmd := range r.cfg.Commands {
+		if r.selectedIDs == nil || r.selectedIDs[cmd.ID] {
+			items = append(items, flatItem{cmd.ID, cmd.Name, "command"})
+		}
+	}
+	for _, ext := range r.cfg.Extensions {
+		if r.selectedIDs == nil || r.selectedIDs[ext.ID] {
+			items = append(items, flatItem{ext.ID, ext.Name, "extension"})
+		}
+	}
+
+	r.totalItems = len(items)
+
+	for _, item := range items {
+		r.itemIdx++
+
+		if ctx.Err() != nil {
+			break
+		}
+
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{
+				Index:  r.itemIdx,
+				Total:  r.totalItems,
+				ID:     item.id,
+				Name:   item.name,
+				Status: "uninstalling",
+			})
+		} else {
+			fmt.Printf("\n  [%d/%d] Uninstalling: %s\n", r.itemIdx, r.totalItems, item.name)
+		}
+
+		var res reporter.Result
+		switch item.tier {
+		case "winget":
+			for _, pkg := range r.cfg.Packages {
+				if pkg.ID == item.id {
+					res = installer.UninstallPackage(pkg, r.dryRun)
+					break
+				}
+			}
+		case "command":
+			for _, cmd := range r.cfg.Commands {
+				if cmd.ID == item.id {
+					res = installer.RunUninstallCommand(cmd, r.dryRun)
+					break
+				}
+			}
+		case "extension":
+			for _, ext := range r.cfg.Extensions {
+				if ext.ID == item.id {
+					res = installer.UninstallExtension(ext, r.dryRun)
+					break
+				}
+			}
+		}
+
+		r.rep.Add(res)
+
+		eventStatus := reporterStatusToGUI(res.Status)
+		if res.Status == reporter.StatusInstalled {
+			eventStatus = "uninstalled"
+			if !r.dryRun {
+				r.state.DeleteSucceeded(item.id)
+			}
+		}
+
+		if r.onProgress != nil {
+			r.onProgress(ProgressEvent{
+				Index:  r.itemIdx,
+				Total:  r.totalItems,
+				ID:     item.id,
+				Name:   item.name,
+				Status: eventStatus,
+				Detail: res.Detail,
+			})
+		}
+	}
+}
+
 // reporterStatusToGUI converts a reporter.Status* constant to the GUI event status string.
 // Most constants match already; only two differ.
 func reporterStatusToGUI(s string) string {
