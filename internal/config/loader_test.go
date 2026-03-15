@@ -276,3 +276,105 @@ func TestLoadAll_EmptyPaths(t *testing.T) {
 		t.Fatal("expected error when default ktuluekit.json is absent, got nil")
 	}
 }
+
+func TestMergePackages(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Package
+		src         []Package
+		wantIDs     []string // expected order
+		wantUpdated map[string]string // id -> expected Name after merge
+	}{
+		{
+			name:    "empty base and src",
+			base:    nil,
+			src:     nil,
+			wantIDs: []string{},
+		},
+		{
+			name:    "src into empty base",
+			base:    nil,
+			src:     []Package{{ID: "A", Name: "Alpha"}},
+			wantIDs: []string{"A"},
+		},
+		{
+			name:    "base with no overlap",
+			base:    []Package{{ID: "A", Name: "Alpha"}},
+			src:     []Package{{ID: "B", Name: "Beta"}},
+			wantIDs: []string{"A", "B"},
+		},
+		{
+			name:        "last-wins on ID collision",
+			base:        []Package{{ID: "A", Name: "Old Name"}},
+			src:         []Package{{ID: "A", Name: "New Name"}},
+			wantIDs:     []string{"A"},
+			wantUpdated: map[string]string{"A": "New Name"},
+		},
+		{
+			name: "position preserved on collision — colliding ID stays at original index",
+			base: []Package{
+				{ID: "A", Name: "Alpha"},
+				{ID: "B", Name: "Beta"},
+				{ID: "C", Name: "Gamma"},
+			},
+			src: []Package{
+				{ID: "B", Name: "Beta v2"},
+			},
+			wantIDs:     []string{"A", "B", "C"},
+			wantUpdated: map[string]string{"B": "Beta v2"},
+		},
+		{
+			name: "new src item appended after base",
+			base: []Package{
+				{ID: "A", Name: "Alpha"},
+			},
+			src: []Package{
+				{ID: "A", Name: "Alpha v2"},
+				{ID: "D", Name: "Delta"},
+			},
+			wantIDs:     []string{"A", "D"},
+			wantUpdated: map[string]string{"A": "Alpha v2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergePackages(tt.base, tt.src)
+
+			// Verify order
+			if len(tt.wantIDs) == 0 && len(got) != 0 {
+				t.Fatalf("want empty result, got %d items", len(got))
+			}
+			gotIDs := make([]string, len(got))
+			for i, p := range got {
+				gotIDs[i] = p.ID
+			}
+			if len(tt.wantIDs) > 0 {
+				if len(got) != len(tt.wantIDs) {
+					t.Fatalf("len(result) = %d, want %d", len(got), len(tt.wantIDs))
+				}
+				for i, id := range tt.wantIDs {
+					if gotIDs[i] != id {
+						t.Errorf("position %d: want ID %q, got order %v", i, id, gotIDs)
+					}
+				}
+			}
+
+			// Verify updated names
+			for id, wantName := range tt.wantUpdated {
+				var found bool
+				for _, p := range got {
+					if p.ID == id {
+						found = true
+						if p.Name != wantName {
+							t.Errorf("id %q: Name = %q, want %q", id, p.Name, wantName)
+						}
+					}
+				}
+				if !found {
+					t.Errorf("id %q not found in result", id)
+				}
+			}
+		})
+	}
+}
