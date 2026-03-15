@@ -52,6 +52,7 @@
 # Scope Change Log
 | # | Category | What | Why | Decision | Outcome |
 |---|----------|------|-----|----------|---------|
+| 1 | user-expansion | Add rustup-init.exe to ktuluekit.json config | User requested during uninstall track | Defer | Follow-up #1 |
 
 # Follow-up Tasks
-(none)
+- [ ] Add `rustup-init.exe` as a scrape-download Command entry in `ktuluekit.json` — download URL from https://rustup.rs/ — scope change #1
