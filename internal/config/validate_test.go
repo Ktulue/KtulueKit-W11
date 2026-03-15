@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -253,6 +254,33 @@ func TestValidate_ScrapeCmd_MissingScrapeURL(t *testing.T) {
 	errs := Validate(c)
 	if len(errs) == 0 {
 		t.Fatal("want error when url_pattern is set but scrape_url is missing")
+	}
+}
+
+func TestPostInstallFieldRoundTrip(t *testing.T) {
+	// Verify the JSON tag is correct by marshalling and unmarshalling.
+	input := `{
+		"id": "Git.Git", "name": "Git", "phase": 1,
+		"post_install": "echo done"
+	}`
+	var pkg Package
+	if err := json.Unmarshal([]byte(input), &pkg); err != nil {
+		t.Fatalf("Unmarshal Package failed: %v", err)
+	}
+	if pkg.PostInstall != "echo done" {
+		t.Errorf("Package.PostInstall: want %q, got %q", "echo done", pkg.PostInstall)
+	}
+
+	cmdInput := `{
+		"id": "wsl2", "name": "WSL 2", "phase": 1,
+		"command": "wsl --install", "post_install": "wsl --version"
+	}`
+	var cmd Command
+	if err := json.Unmarshal([]byte(cmdInput), &cmd); err != nil {
+		t.Fatalf("Unmarshal Command failed: %v", err)
+	}
+	if cmd.PostInstall != "wsl --version" {
+		t.Errorf("Command.PostInstall: want %q, got %q", "wsl --version", cmd.PostInstall)
 	}
 }
 

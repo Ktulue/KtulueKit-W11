@@ -41,6 +41,7 @@ type Package struct {
 	RebootAfter    bool   `json:"reboot_after"`
 	TimeoutSeconds int    `json:"timeout_seconds"` // 0 means use Settings.DefaultTimeoutSeconds
 	Notes          string `json:"notes"`
+	PostInstall    string `json:"post_install,omitempty"` // Optional shell command run after StatusInstalled or StatusUpgraded
 }
 
 // Command is a Tier 2 shell command.
@@ -61,6 +62,7 @@ type Command struct {
 	ScrapeURL   string `json:"scrape_url"`
 	URLPattern  string `json:"url_pattern"`
 	InstallArgs string `json:"install_args"`
+	PostInstall string `json:"post_install,omitempty"` // Optional shell command run after StatusInstalled or StatusUpgraded
 }
 
 // Extension is a Tier 3 browser extension.
