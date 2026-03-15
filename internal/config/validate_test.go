@@ -284,6 +284,81 @@ func TestPostInstallFieldRoundTrip(t *testing.T) {
 	}
 }
 
+// --- ExtensionID character-set validation ---
+
+// TestValidate_ExtensionID_ChromeValid verifies a 32-char all-[a-p] ID is accepted.
+func TestValidate_ExtensionID_ChromeValid(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{
+		ID: "e1", Name: "E1", Phase: 1,
+		Browser:     "chrome",
+		ExtensionID: "abcdefghijklmnopabcdefghijklmnop", // 32 chars, a-p only
+	}}
+	errs := Validate(c)
+	if len(errs) != 0 {
+		t.Errorf("valid Chrome extension ID: want 0 errors, got %+v", errs)
+	}
+}
+
+// TestValidate_ExtensionID_ChromeInvalidChar verifies a 32-char ID containing
+// a shell metacharacter ('&') is rejected for chrome/brave browsers.
+func TestValidate_ExtensionID_ChromeInvalidChar(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{
+		ID: "e1", Name: "E1", Phase: 1,
+		Browser:     "chrome",
+		ExtensionID: "&bcdefghijklmnopabcdefghijklmnop", // & at position 0
+	}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for Chrome ID with invalid char '&', got none")
+	}
+}
+
+// TestValidate_ExtensionID_BraveInvalidChar verifies the same character-set
+// enforcement applies to "brave" browser entries.
+func TestValidate_ExtensionID_BraveInvalidChar(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{
+		ID: "e1", Name: "E1", Phase: 1,
+		Browser:     "brave",
+		ExtensionID: "|bcdefghijklmnopabcdefghijklmnop", // | at position 0
+	}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for Brave ID with invalid char '|', got none")
+	}
+}
+
+// TestValidate_ExtensionID_FirefoxValid verifies a valid AMO slug is accepted.
+func TestValidate_ExtensionID_FirefoxValid(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{
+		ID: "e1", Name: "E1", Phase: 1,
+		Browser:     "firefox",
+		ExtensionID: "ublock-origin", // valid AMO slug
+	}}
+	errs := Validate(c)
+	if len(errs) != 0 {
+		t.Errorf("valid Firefox slug: want 0 errors, got %+v", errs)
+	}
+}
+
+// TestValidate_ExtensionID_FirefoxInvalidChar verifies a Firefox slug
+// containing a shell metacharacter ('&') is rejected.
+func TestValidate_ExtensionID_FirefoxInvalidChar(t *testing.T) {
+	c := cfgBase("1.0", "MyKit")
+	c.Extensions = []Extension{{
+		ID: "e1", Name: "E1", Phase: 1,
+		Browser:     "firefox",
+		ExtensionID: "ublock&origin", // & is not in [a-z0-9_@.-]
+	}}
+	errs := Validate(c)
+	if len(errs) == 0 {
+		t.Fatal("want error for Firefox slug with invalid char '&', got none")
+	}
+}
+
 func TestValidate_ScrapeCmd_MissingURLPattern(t *testing.T) {
 	c := cfgBase("1.0", "MyKit")
 	c.Commands = []Command{{
