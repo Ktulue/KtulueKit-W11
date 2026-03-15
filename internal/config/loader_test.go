@@ -378,3 +378,118 @@ func TestMergePackages(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeCommands(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Command
+		src         []Command
+		wantIDs     []string
+		wantUpdated map[string]string // id -> expected Name
+	}{
+		{
+			name:    "no overlap",
+			base:    []Command{{ID: "a", Name: "A"}},
+			src:     []Command{{ID: "b", Name: "B"}},
+			wantIDs: []string{"a", "b"},
+		},
+		{
+			name:        "last-wins on collision",
+			base:        []Command{{ID: "x", Name: "Old"}},
+			src:         []Command{{ID: "x", Name: "New"}},
+			wantIDs:     []string{"x"},
+			wantUpdated: map[string]string{"x": "New"},
+		},
+		{
+			name: "position preserved",
+			base: []Command{
+				{ID: "a", Name: "A"},
+				{ID: "b", Name: "B"},
+			},
+			src: []Command{
+				{ID: "a", Name: "A2"},
+			},
+			wantIDs:     []string{"a", "b"},
+			wantUpdated: map[string]string{"a": "A2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeCommands(tt.base, tt.src)
+			if len(got) != len(tt.wantIDs) {
+				t.Fatalf("len = %d, want %d", len(got), len(tt.wantIDs))
+			}
+			for i, id := range tt.wantIDs {
+				if got[i].ID != id {
+					t.Errorf("[%d] ID = %q, want %q", i, got[i].ID, id)
+				}
+			}
+			for id, wantName := range tt.wantUpdated {
+				for _, c := range got {
+					if c.ID == id && c.Name != wantName {
+						t.Errorf("id %q: Name = %q, want %q", id, c.Name, wantName)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestMergeExtensions(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Extension
+		src         []Extension
+		wantIDs     []string
+		wantUpdated map[string]string // id -> expected Name
+	}{
+		{
+			name:    "no overlap",
+			base:    []Extension{{ID: "ext-a", Name: "Ext A"}},
+			src:     []Extension{{ID: "ext-b", Name: "Ext B"}},
+			wantIDs: []string{"ext-a", "ext-b"},
+		},
+		{
+			name:        "last-wins on collision",
+			base:        []Extension{{ID: "ext-a", Name: "Old"}},
+			src:         []Extension{{ID: "ext-a", Name: "New"}},
+			wantIDs:     []string{"ext-a"},
+			wantUpdated: map[string]string{"ext-a": "New"},
+		},
+		{
+			name: "position preserved",
+			base: []Extension{
+				{ID: "ext-a", Name: "A"},
+				{ID: "ext-b", Name: "B"},
+			},
+			src: []Extension{
+				{ID: "ext-a", Name: "A2"},
+				{ID: "ext-c", Name: "C"},
+			},
+			wantIDs:     []string{"ext-a", "ext-b", "ext-c"},
+			wantUpdated: map[string]string{"ext-a": "A2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeExtensions(tt.base, tt.src)
+			if len(got) != len(tt.wantIDs) {
+				t.Fatalf("len = %d, want %d", len(got), len(tt.wantIDs))
+			}
+			for i, id := range tt.wantIDs {
+				if got[i].ID != id {
+					t.Errorf("[%d] ID = %q, want %q", i, got[i].ID, id)
+				}
+			}
+			for id, wantName := range tt.wantUpdated {
+				for _, e := range got {
+					if e.ID == id && e.Name != wantName {
+						t.Errorf("id %q: Name = %q, want %q", id, e.Name, wantName)
+					}
+				}
+			}
+		})
+	}
+}
