@@ -144,13 +144,13 @@ The runner processes commands in JSON array order within a phase. `fix-python-al
   "name": "Fix Python App Execution Alias",
   "phase": 4,
   "depends_on": ["Python.Python.3.12"],
-  "check": "cmd /C python --version 2>&1 | findstr /C:\"Python 3.12\"",
-  "command": "cmd /C pwsh -NoProfile -Command \"Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Execution Aliases' -Name 'python.exe' -Value 0; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Execution Aliases' -Name 'python3.exe' -Value 0\""
+  "check": "python --version 2>&1 | findstr /C:\"Python 3.12\"",
+  "command": "pwsh -NoProfile -Command \"Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Execution Aliases' -Name 'python.exe' -Value 0; Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\App Execution Aliases' -Name 'python3.exe' -Value 0\""
 }
 ```
 
 **Behavior:**
-- `check` runs `cmd /C python --version | findstr "Python 3.12"`. The Microsoft Store stub exits non-zero when invoked non-interactively, so if the stub is active, the check fails and the command runs. If `python --version` exits 0 and matches `Python 3.12`, the stub is either already disabled or not intercepting the lookup in this context — either way, the fix is not needed and the command is skipped.
+- `check` runs `python --version | findstr "Python 3.12"` (the runner wraps all check/command strings in `cmd /C` automatically — do not add `cmd /C` to the JSON values). The Microsoft Store stub exits non-zero when invoked non-interactively, so if the stub is active, the check fails and the command runs. If `python --version` exits 0 and matches `Python 3.12`, the stub is either already disabled or not intercepting the lookup in this context — either way, the fix is not needed and the command is skipped.
 - The command disables both `python.exe` and `python3.exe` alias keys.
 - The command does not inject a Python PATH entry. After `RefreshPath()`, the machine-scope winget install is already on the child process PATH. The alias disable is sufficient.
 - `depends_on: ["Python.Python.3.12"]` ensures real Python is installed before this runs.
@@ -163,8 +163,8 @@ The runner processes commands in JSON array order within a phase. `fix-python-al
   "name": "Fix Go PATH",
   "phase": 4,
   "depends_on": ["GoLang.Go"],
-  "check": "cmd /C go version",
-  "command": "cmd /C pwsh -NoProfile -Command \"$g = 'C:\\Program Files\\Go\\bin'; $cur = [Environment]::GetEnvironmentVariable('PATH','User'); if ($cur -notlike '*Go\\bin*') { [Environment]::SetEnvironmentVariable('PATH',\\\"$g;$cur\\\",'User') }\""
+  "check": "go version",
+  "command": "pwsh -NoProfile -Command \"$g = 'C:\\Program Files\\Go\\bin'; $cur = [Environment]::GetEnvironmentVariable('PATH','User'); if ($cur -notlike '*Go\\bin*') { [Environment]::SetEnvironmentVariable('PATH', ($g + ';' + $cur), 'User') }\""
 }
 ```
 
