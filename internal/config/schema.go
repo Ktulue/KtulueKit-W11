@@ -53,6 +53,7 @@ type Command struct {
 	Description     string   `json:"description"`     // Short user-facing tooltip: "What does this do?"
 	Check           string   `json:"check"`            // Shell command — exit 0 = already installed, skip
 	Cmd             string   `json:"command"`          // Install command to run
+	UninstallCmd    string   `json:"uninstall_cmd,omitempty"` // Optional shell command for uninstall
 	DependsOn       []string `json:"depends_on"`       // Winget IDs or command IDs that must have succeeded
 	RebootAfter     bool     `json:"reboot_after"`
 	TimeoutSeconds  int      `json:"timeout_seconds"`
