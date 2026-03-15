@@ -49,8 +49,15 @@ func runExport(_ *cobra.Command, _ []string) error {
 		outPath = "ktuluekit-snapshot.json"
 	}
 
+	// Resolve any https:// entries to temp files before loading.
+	resolved, cleanup, err := resolveConfigPaths(paths)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	// Load and validate config.
-	cfg, err := config.LoadAll(paths)
+	cfg, err := config.LoadAll(resolved)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}

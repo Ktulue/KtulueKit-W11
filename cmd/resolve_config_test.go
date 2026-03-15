@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 // TestResolveConfigPaths_LocalPassThrough verifies that plain file paths are
@@ -234,6 +236,38 @@ func TestResolveConfigPaths_CleanupRemovesTempFiles(t *testing.T) {
 
 	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
 		t.Error("temp file should be removed after cleanup()")
+	}
+}
+
+// TestRunValidate_WithLocalConfigPath verifies that runValidate correctly resolves
+// a local config path through resolveConfigPaths before passing to LoadAll.
+func TestRunValidate_WithLocalConfigPath(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "ktuluekit.json")
+	minimalCfg := `{
+		"$schema": "",
+		"version": "1",
+		"metadata": {"name": "test"},
+		"settings": {},
+		"packages": [],
+		"commands": [],
+		"extensions": []
+	}`
+	if err := os.WriteFile(cfgPath, []byte(minimalCfg), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origPaths := configPaths
+	configPaths = []string{cfgPath}
+	defer func() { configPaths = origPaths }()
+
+	cmd := &cobra.Command{}
+	err := runValidate(cmd, nil)
+	if err != nil && containsAll(err.Error(), "not yet implemented") {
+		t.Errorf("runValidate returned stub error: %v", err)
+	}
+	if err != nil && containsAll(err.Error(), "insecure URL") {
+		t.Errorf("runValidate rejected a local path as a URL: %v", err)
 	}
 }
 

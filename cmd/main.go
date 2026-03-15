@@ -109,7 +109,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("ktuluekit must be run as Administrator\n  Right-click your terminal and select 'Run as administrator', then try again")
 	}
 
-	cfg, err := config.LoadAll(configPaths)
+	resolved, cleanup, err := resolveConfigPaths(configPaths)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	cfg, err := config.LoadAll(resolved)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
