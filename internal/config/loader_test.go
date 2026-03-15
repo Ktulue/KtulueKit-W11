@@ -276,3 +276,362 @@ func TestLoadAll_EmptyPaths(t *testing.T) {
 		t.Fatal("expected error when default ktuluekit.json is absent, got nil")
 	}
 }
+
+func TestMergeProfiles(t *testing.T) {
+	tests := []struct {
+		name         string
+		base         []Profile
+		src          []Profile
+		wantNames    []string
+		wantIDCounts map[string]int // profile name -> expected len(IDs)
+	}{
+		{
+			name:      "no overlap — both profiles kept",
+			base:      []Profile{{Name: "Full", IDs: []string{"a", "b"}}},
+			src:       []Profile{{Name: "Minimal", IDs: []string{"a"}}},
+			wantNames: []string{"Full", "Minimal"},
+		},
+		{
+			name: "last-wins on name collision",
+			base: []Profile{{Name: "Full", IDs: []string{"a", "b"}}},
+			src:  []Profile{{Name: "Full", IDs: []string{"a", "b", "c"}}},
+			wantNames:    []string{"Full"},
+			wantIDCounts: map[string]int{"Full": 3},
+		},
+		{
+			name: "position preserved — collision stays at base index",
+			base: []Profile{
+				{Name: "Full", IDs: []string{"a"}},
+				{Name: "Minimal", IDs: []string{"b"}},
+			},
+			src: []Profile{
+				{Name: "Full", IDs: []string{"a", "b", "c"}},
+			},
+			wantNames:    []string{"Full", "Minimal"},
+			wantIDCounts: map[string]int{"Full": 3},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeProfiles(tt.base, tt.src)
+			if len(got) != len(tt.wantNames) {
+				t.Fatalf("len = %d, want %d (got names: %v)", len(got), len(tt.wantNames), extractProfileNames(got))
+			}
+			for i, name := range tt.wantNames {
+				if got[i].Name != name {
+					t.Errorf("[%d] Name = %q, want %q", i, got[i].Name, name)
+				}
+			}
+			for name, wantCount := range tt.wantIDCounts {
+				for _, p := range got {
+					if p.Name == name && len(p.IDs) != wantCount {
+						t.Errorf("profile %q: len(IDs) = %d, want %d", name, len(p.IDs), wantCount)
+					}
+				}
+			}
+		})
+	}
+}
+
+// extractProfileNames is a test helper that extracts profile names for error messages.
+func extractProfileNames(profiles []Profile) []string {
+	names := make([]string, len(profiles))
+	for i, p := range profiles {
+		names[i] = p.Name
+	}
+	return names
+}
+
+func TestMergeSettings(t *testing.T) {
+	tests := []struct {
+		name               string
+		dst                Settings
+		src                Settings
+		wantLogDir         string
+		wantRetryCount     int
+		wantTimeout        int
+		wantScope          string
+		wantExtMode        string
+		wantUpgradeEnabled bool
+	}{
+		{
+			name:           "src non-zero overwrites dst",
+			dst:            Settings{LogDir: "./logs", RetryCount: 2, DefaultTimeoutSeconds: 60, DefaultScope: "machine", ExtensionMode: "url"},
+			src:            Settings{LogDir: "./new-logs", RetryCount: 5},
+			wantLogDir:     "./new-logs",
+			wantRetryCount: 5,
+			wantTimeout:    60,
+			wantScope:      "machine",
+			wantExtMode:    "url",
+		},
+		{
+			name:           "src zero fields do not overwrite dst",
+			dst:            Settings{LogDir: "./logs", RetryCount: 3},
+			src:            Settings{},
+			wantLogDir:     "./logs",
+			wantRetryCount: 3,
+		},
+		{
+			name:               "UpgradeIfInstalled one-way ratchet: src true sets dst",
+			dst:                Settings{UpgradeIfInstalled: false},
+			src:                Settings{UpgradeIfInstalled: true},
+			wantUpgradeEnabled: true,
+		},
+		{
+			name:               "UpgradeIfInstalled one-way ratchet: src false cannot clear dst",
+			dst:                Settings{UpgradeIfInstalled: true},
+			src:                Settings{UpgradeIfInstalled: false},
+			wantUpgradeEnabled: true,
+		},
+		{
+			name:               "UpgradeIfInstalled both false stays false",
+			dst:                Settings{UpgradeIfInstalled: false},
+			src:                Settings{UpgradeIfInstalled: false},
+			wantUpgradeEnabled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dst := tt.dst
+			mergeSettings(&dst, &tt.src)
+
+			if tt.wantLogDir != "" && dst.LogDir != tt.wantLogDir {
+				t.Errorf("LogDir = %q, want %q", dst.LogDir, tt.wantLogDir)
+			}
+			if tt.wantRetryCount != 0 && dst.RetryCount != tt.wantRetryCount {
+				t.Errorf("RetryCount = %d, want %d", dst.RetryCount, tt.wantRetryCount)
+			}
+			if tt.wantTimeout != 0 && dst.DefaultTimeoutSeconds != tt.wantTimeout {
+				t.Errorf("DefaultTimeoutSeconds = %d, want %d", dst.DefaultTimeoutSeconds, tt.wantTimeout)
+			}
+			if tt.wantScope != "" && dst.DefaultScope != tt.wantScope {
+				t.Errorf("DefaultScope = %q, want %q", dst.DefaultScope, tt.wantScope)
+			}
+			if tt.wantExtMode != "" && dst.ExtensionMode != tt.wantExtMode {
+				t.Errorf("ExtensionMode = %q, want %q", dst.ExtensionMode, tt.wantExtMode)
+			}
+			if dst.UpgradeIfInstalled != tt.wantUpgradeEnabled {
+				t.Errorf("UpgradeIfInstalled = %v, want %v", dst.UpgradeIfInstalled, tt.wantUpgradeEnabled)
+			}
+		})
+	}
+}
+
+func TestMergePackages(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Package
+		src         []Package
+		wantIDs     []string // expected order
+		wantUpdated map[string]string // id -> expected Name after merge
+	}{
+		{
+			name:    "empty base and src",
+			base:    nil,
+			src:     nil,
+			wantIDs: []string{},
+		},
+		{
+			name:    "src into empty base",
+			base:    nil,
+			src:     []Package{{ID: "A", Name: "Alpha"}},
+			wantIDs: []string{"A"},
+		},
+		{
+			name:    "base with no overlap",
+			base:    []Package{{ID: "A", Name: "Alpha"}},
+			src:     []Package{{ID: "B", Name: "Beta"}},
+			wantIDs: []string{"A", "B"},
+		},
+		{
+			name:        "last-wins on ID collision",
+			base:        []Package{{ID: "A", Name: "Old Name"}},
+			src:         []Package{{ID: "A", Name: "New Name"}},
+			wantIDs:     []string{"A"},
+			wantUpdated: map[string]string{"A": "New Name"},
+		},
+		{
+			name: "position preserved on collision — colliding ID stays at original index",
+			base: []Package{
+				{ID: "A", Name: "Alpha"},
+				{ID: "B", Name: "Beta"},
+				{ID: "C", Name: "Gamma"},
+			},
+			src: []Package{
+				{ID: "B", Name: "Beta v2"},
+			},
+			wantIDs:     []string{"A", "B", "C"},
+			wantUpdated: map[string]string{"B": "Beta v2"},
+		},
+		{
+			name: "new src item appended after base",
+			base: []Package{
+				{ID: "A", Name: "Alpha"},
+			},
+			src: []Package{
+				{ID: "A", Name: "Alpha v2"},
+				{ID: "D", Name: "Delta"},
+			},
+			wantIDs:     []string{"A", "D"},
+			wantUpdated: map[string]string{"A": "Alpha v2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergePackages(tt.base, tt.src)
+
+			// Verify order
+			if len(tt.wantIDs) == 0 && len(got) != 0 {
+				t.Fatalf("want empty result, got %d items", len(got))
+			}
+			gotIDs := make([]string, len(got))
+			for i, p := range got {
+				gotIDs[i] = p.ID
+			}
+			if len(tt.wantIDs) > 0 {
+				if len(got) != len(tt.wantIDs) {
+					t.Fatalf("len(result) = %d, want %d", len(got), len(tt.wantIDs))
+				}
+				for i, id := range tt.wantIDs {
+					if gotIDs[i] != id {
+						t.Errorf("position %d: want ID %q, got order %v", i, id, gotIDs)
+					}
+				}
+			}
+
+			// Verify updated names
+			for id, wantName := range tt.wantUpdated {
+				var found bool
+				for _, p := range got {
+					if p.ID == id {
+						found = true
+						if p.Name != wantName {
+							t.Errorf("id %q: Name = %q, want %q", id, p.Name, wantName)
+						}
+					}
+				}
+				if !found {
+					t.Errorf("id %q not found in result", id)
+				}
+			}
+		})
+	}
+}
+
+func TestMergeCommands(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Command
+		src         []Command
+		wantIDs     []string
+		wantUpdated map[string]string // id -> expected Name
+	}{
+		{
+			name:    "no overlap",
+			base:    []Command{{ID: "a", Name: "A"}},
+			src:     []Command{{ID: "b", Name: "B"}},
+			wantIDs: []string{"a", "b"},
+		},
+		{
+			name:        "last-wins on collision",
+			base:        []Command{{ID: "x", Name: "Old"}},
+			src:         []Command{{ID: "x", Name: "New"}},
+			wantIDs:     []string{"x"},
+			wantUpdated: map[string]string{"x": "New"},
+		},
+		{
+			name: "position preserved",
+			base: []Command{
+				{ID: "a", Name: "A"},
+				{ID: "b", Name: "B"},
+			},
+			src: []Command{
+				{ID: "a", Name: "A2"},
+			},
+			wantIDs:     []string{"a", "b"},
+			wantUpdated: map[string]string{"a": "A2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeCommands(tt.base, tt.src)
+			if len(got) != len(tt.wantIDs) {
+				t.Fatalf("len = %d, want %d", len(got), len(tt.wantIDs))
+			}
+			for i, id := range tt.wantIDs {
+				if got[i].ID != id {
+					t.Errorf("[%d] ID = %q, want %q", i, got[i].ID, id)
+				}
+			}
+			for id, wantName := range tt.wantUpdated {
+				for _, c := range got {
+					if c.ID == id && c.Name != wantName {
+						t.Errorf("id %q: Name = %q, want %q", id, c.Name, wantName)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestMergeExtensions(t *testing.T) {
+	tests := []struct {
+		name        string
+		base        []Extension
+		src         []Extension
+		wantIDs     []string
+		wantUpdated map[string]string // id -> expected Name
+	}{
+		{
+			name:    "no overlap",
+			base:    []Extension{{ID: "ext-a", Name: "Ext A"}},
+			src:     []Extension{{ID: "ext-b", Name: "Ext B"}},
+			wantIDs: []string{"ext-a", "ext-b"},
+		},
+		{
+			name:        "last-wins on collision",
+			base:        []Extension{{ID: "ext-a", Name: "Old"}},
+			src:         []Extension{{ID: "ext-a", Name: "New"}},
+			wantIDs:     []string{"ext-a"},
+			wantUpdated: map[string]string{"ext-a": "New"},
+		},
+		{
+			name: "position preserved",
+			base: []Extension{
+				{ID: "ext-a", Name: "A"},
+				{ID: "ext-b", Name: "B"},
+			},
+			src: []Extension{
+				{ID: "ext-a", Name: "A2"},
+				{ID: "ext-c", Name: "C"},
+			},
+			wantIDs:     []string{"ext-a", "ext-b", "ext-c"},
+			wantUpdated: map[string]string{"ext-a": "A2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeExtensions(tt.base, tt.src)
+			if len(got) != len(tt.wantIDs) {
+				t.Fatalf("len = %d, want %d", len(got), len(tt.wantIDs))
+			}
+			for i, id := range tt.wantIDs {
+				if got[i].ID != id {
+					t.Errorf("[%d] ID = %q, want %q", i, got[i].ID, id)
+				}
+			}
+			for id, wantName := range tt.wantUpdated {
+				for _, e := range got {
+					if e.ID == id && e.Name != wantName {
+						t.Errorf("id %q: Name = %q, want %q", id, e.Name, wantName)
+					}
+				}
+			}
+		})
+	}
+}

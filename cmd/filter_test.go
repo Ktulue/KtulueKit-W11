@@ -170,3 +170,158 @@ func TestAllConfigIDs_ExcludeFiltering(t *testing.T) {
 		t.Errorf("want [unknown-id] in unknowns, got %v", unknowns)
 	}
 }
+
+func TestFilterFlagsError_Table(t *testing.T) {
+	tests := []struct {
+		name    string
+		only    string
+		exclude string
+		wantErr bool
+	}{
+		{"both set — error", "Git.Git", "Steam", true},
+		{"only set — ok", "Git.Git", "", false},
+		{"exclude set — ok", "", "Steam", false},
+		{"neither set — ok", "", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := filterFlagsError(tt.only, tt.exclude)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("filterFlagsError(%q, %q) error = %v, wantErr %v", tt.only, tt.exclude, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPhaseFlagsError_Table(t *testing.T) {
+	// resumePhase default is 1. phaseFlagsError errors when phase != 0 AND resumePhase != 1.
+	tests := []struct {
+		name        string
+		phase       int
+		resumePhase int
+		wantErr     bool
+	}{
+		{"both non-default — error", 2, 2, true},
+		{"phase set, resumePhase default (1) — ok", 2, 1, false},
+		{"phase default (0), resumePhase set — ok", 0, 2, false},
+		{"both default — ok", 0, 1, false},
+		{"phase set, resumePhase 3 — error", 1, 3, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := phaseFlagsError(tt.phase, tt.resumePhase)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("phaseFlagsError(%d, %d) error = %v, wantErr %v", tt.phase, tt.resumePhase, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestUpgradeOnlyFlagsError_Table(t *testing.T) {
+	tests := []struct {
+		name        string
+		upgradeOnly bool
+		noUpgrade   bool
+		wantErr     bool
+	}{
+		{"both true — error", true, true, true},
+		{"upgradeOnly only — ok", true, false, false},
+		{"noUpgrade only — ok", false, true, false},
+		{"neither — ok", false, false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := upgradeOnlyFlagsError(tt.upgradeOnly, tt.noUpgrade)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("upgradeOnlyFlagsError(%v, %v) error = %v, wantErr %v", tt.upgradeOnly, tt.noUpgrade, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestResolveFilter(t *testing.T) {
+	cfg := &config.Config{
+		Profiles: []config.Profile{
+			{Name: "Gaming", IDs: []string{"Valve.Steam", "Discord.Discord"}},
+			{Name: "Dev", IDs: []string{"Git.Git", "Microsoft.VisualStudioCode"}},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		profile     string
+		only        string
+		wantErr     bool
+		wantNil     bool // true = expect nil map (all items)
+		wantIDs     []string
+		wantMissing []string
+	}{
+		{
+			name:    "profile found returns ID map",
+			profile: "Gaming",
+			only:    "",
+			wantIDs: []string{"Valve.Steam", "Discord.Discord"},
+		},
+		{
+			name:    "profile not found returns error",
+			profile: "NonExistent",
+			only:    "",
+			wantErr: true,
+		},
+		{
+			name:    "profile is case-sensitive — wrong case returns error",
+			profile: "gaming",
+			only:    "",
+			wantErr: true,
+		},
+		{
+			name:    "only flag returns parseIDList result",
+			profile: "",
+			only:    "Git.Git,Mozilla.Firefox",
+			wantIDs: []string{"Git.Git", "Mozilla.Firefox"},
+		},
+		{
+			name:    "neither profile nor only returns nil (all items)",
+			profile: "",
+			only:    "",
+			wantNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveFilter(cfg, tt.profile, tt.only)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("resolveFilter(profile=%q, only=%q): want error, got nil", tt.profile, tt.only)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("resolveFilter unexpected error: %v", err)
+			}
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("want nil map (all items), got %v", got)
+				}
+				return
+			}
+
+			for _, id := range tt.wantIDs {
+				if !got[id] {
+					t.Errorf("expected %q in filter map, not found", id)
+				}
+			}
+			for _, id := range tt.wantMissing {
+				if got[id] {
+					t.Errorf("expected %q absent from filter map, but it was present", id)
+				}
+			}
+		})
+	}
+}

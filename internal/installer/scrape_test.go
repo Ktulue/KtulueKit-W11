@@ -153,3 +153,81 @@ func TestScrapeAndInstall_TempFileCleanup(t *testing.T) {
 		os.Remove(tempPath) // clean up if test fails
 	}
 }
+
+// TestScrapeAndInstall_MultipleMatches verifies that when multiple URLs match
+// the pattern, the first match is used (re.FindString returns first).
+func TestScrapeAndInstall_MultipleMatches(t *testing.T) {
+	firstCalled := false
+	secondCalled := false
+
+	firstSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		firstCalled = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer firstSrv.Close()
+
+	secondSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		secondCalled = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer secondSrv.Close()
+
+	pageBody := fmt.Sprintf(
+		`<a href="%s/tool.exe">First</a> <a href="%s/tool.exe">Second</a>`,
+		firstSrv.URL, secondSrv.URL,
+	)
+	pageSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, pageBody)
+	}))
+	defer pageSrv.Close()
+
+	cmd := makeCmd(pageSrv.URL, `http://[^"]+\.exe`)
+	cmd.Check = "cmd /C exit 1" // not installed
+
+	ScrapeAndInstall(cmd, false)
+
+	if !firstCalled {
+		t.Error("first match: expected first download server to be called")
+	}
+	if secondCalled {
+		t.Error("first match: second download server should NOT be called")
+	}
+}
+
+// TestScrapeAndInstall_EmptyHTMLBody verifies that an empty page body returns StatusFailed.
+func TestScrapeAndInstall_EmptyHTMLBody(t *testing.T) {
+	pageSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer pageSrv.Close()
+
+	cmd := makeCmd(pageSrv.URL, `http://[^"]+\.exe`)
+	cmd.Check = "cmd /C exit 1"
+	res := ScrapeAndInstall(cmd, false)
+
+	if res.Status != reporter.StatusFailed {
+		t.Errorf("empty body: want StatusFailed, got %q", res.Status)
+	}
+	if !strings.Contains(res.Detail, "no download URL") {
+		t.Errorf("empty body: detail %q should contain 'no download URL'", res.Detail)
+	}
+}
+
+// TestScrapeAndInstall_InvalidURLPattern verifies that a malformed regex returns StatusFailed.
+func TestScrapeAndInstall_InvalidURLPattern(t *testing.T) {
+	pageSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "<html>some content</html>")
+	}))
+	defer pageSrv.Close()
+
+	cmd := makeCmd(pageSrv.URL, `[invalid(regex`)
+	cmd.Check = "cmd /C exit 1"
+	res := ScrapeAndInstall(cmd, false)
+
+	if res.Status != reporter.StatusFailed {
+		t.Errorf("invalid pattern: want StatusFailed, got %q", res.Status)
+	}
+	if !strings.Contains(res.Detail, "compile") {
+		t.Errorf("invalid pattern: detail %q should contain 'compile'", res.Detail)
+	}
+}
