@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"io"
 	"testing"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
@@ -100,7 +101,7 @@ func TestSetSelectedIDsFiltersCount(t *testing.T) {
 			{ID: "c", Name: "C", Phase: 2},
 		},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -120,7 +121,7 @@ func TestSetSelectedIDsNilRunsAll(t *testing.T) {
 			{ID: "b", Name: "B", Phase: 1},
 		},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -204,7 +205,7 @@ func TestSetOnlyPhase_TotalItemsReflectsOnlyPhase(t *testing.T) {
 		Commands:   []config.Command{},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -228,7 +229,7 @@ func TestConsecutiveFailures_StateAwareSkipNeutral(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{{ID: "already-done", Name: "Already Done", Phase: 1, Scope: "machine", TimeoutSeconds: 300}},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{
 		Succeeded: map[string]bool{"already-done": true},
@@ -258,7 +259,7 @@ func TestUpgradeOnly_SkipsMissingPackage(t *testing.T) {
 		Commands:   []config.Command{},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -281,7 +282,7 @@ func TestUpgradeOnly_SkipsUnknownPackage(t *testing.T) {
 		Commands:   []config.Command{},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -304,7 +305,7 @@ func TestUpgradeOnly_ProceedsWhenInstalled(t *testing.T) {
 		Commands:   []config.Command{},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{
 		Succeeded: map[string]bool{"installed-pkg": true},
@@ -330,7 +331,7 @@ func TestUpgradeOnly_SkipsExtensionSilently(t *testing.T) {
 			{ID: "ext1", Name: "Extension", Phase: 1},
 		},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -352,7 +353,7 @@ func TestUpgradeOnly_SkipsMissingCommand(t *testing.T) {
 		},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 
@@ -374,7 +375,7 @@ func TestUpgradeOnly_ProceedsWhenCommandInstalled(t *testing.T) {
 		},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{
 		Succeeded: map[string]bool{"installed-cmd": true},
@@ -421,7 +422,7 @@ func TestCtrlC_StopsBeforeFirstItem(t *testing.T) {
 		Commands:   []config.Command{},
 		Extensions: []config.Extension{},
 	}
-	rep, _ := reporter.New(t.TempDir())
+	rep, _ := reporter.New(t.TempDir(), io.Discard)
 	defer rep.Close()
 	s := &state.State{Succeeded: make(map[string]bool), Failed: make(map[string]bool)}
 

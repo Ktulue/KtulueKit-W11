@@ -1,6 +1,34 @@
 package reporter
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+func TestProgressWriterCapture(t *testing.T) {
+	var buf bytes.Buffer
+	r := &Reporter{progressWriter: &buf}
+	r.results = []Result{
+		{ID: "Git.Git", Name: "Git", Tier: "winget", Status: StatusInstalled},
+	}
+	r.Add(Result{ID: "Git.Git", Name: "Git", Tier: "winget", Status: StatusInstalled})
+
+	if !strings.Contains(buf.String(), "Git") {
+		t.Errorf("expected progress output to contain 'Git', got: %q", buf.String())
+	}
+}
+
+func TestProgressWriterDefault(t *testing.T) {
+	// Reporter with nil progressWriter should not panic on Add.
+	r := &Reporter{progressWriter: nil}
+	defer func() {
+		if p := recover(); p != nil {
+			t.Fatalf("Add() panicked with nil progressWriter: %v", p)
+		}
+	}()
+	r.Add(Result{ID: "test", Name: "Test", Tier: "winget", Status: StatusInstalled})
+}
 
 func TestNamesBy(t *testing.T) {
 	r := &Reporter{}

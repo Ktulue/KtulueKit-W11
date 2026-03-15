@@ -127,7 +127,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	rep, err := reporter.New(cfg.Settings.LogDir)
+	rep, err := reporter.New(cfg.Settings.LogDir, os.Stdout)
 	if err != nil {
 		return fmt.Errorf("reporter error: %w", err)
 	}

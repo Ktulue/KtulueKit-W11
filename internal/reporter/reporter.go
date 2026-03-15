@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,12 +33,18 @@ type Result struct {
 
 // Reporter collects results and writes the final summary.
 type Reporter struct {
-	results []Result
-	logDir  string
-	logFile *os.File
+	results        []Result
+	logDir         string
+	logFile        *os.File
+	progressWriter io.Writer
 }
 
-func New(logDir string) (*Reporter, error) {
+// New creates a Reporter that writes live progress to progressWriter.
+// Pass os.Stdout for normal CLI use; pass os.Stderr when --output-format is set.
+func New(logDir string, progressWriter io.Writer) (*Reporter, error) {
+	if progressWriter == nil {
+		progressWriter = os.Stdout
+	}
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, fmt.Errorf("cannot create log directory: %w", err)
 	}
@@ -54,12 +61,12 @@ func New(logDir string) (*Reporter, error) {
 	fmt.Fprintln(f, strings.Repeat("=", 60))
 	fmt.Fprintln(f)
 
-	fmt.Printf("Logging to: %s\n\n", logPath)
+	fmt.Fprintf(progressWriter, "Logging to: %s\n\n", logPath)
 
-	return &Reporter{logDir: logDir, logFile: f}, nil
+	return &Reporter{logDir: logDir, logFile: f, progressWriter: progressWriter}, nil
 }
 
-// Add records a result and streams it to stdout + log file in real time.
+// Add records a result and streams it to progressWriter + log file in real time.
 func (r *Reporter) Add(res Result) {
 	r.results = append(r.results, res)
 
@@ -69,8 +76,14 @@ func (r *Reporter) Add(res Result) {
 		line += fmt.Sprintf("  — %s", res.Detail)
 	}
 
-	fmt.Println(line)
-	fmt.Fprintln(r.logFile, line)
+	w := r.progressWriter
+	if w == nil {
+		w = os.Stdout
+	}
+	fmt.Fprintln(w, line)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, line)
+	}
 }
 
 // Summary prints and writes the final categorized report.
@@ -90,9 +103,16 @@ func (r *Reporter) Summary() {
 		{StatusShortcutRemoved, "🗑️ ", "Desktop shortcuts removed"},
 	}
 
+	w := r.progressWriter
+	if w == nil {
+		w = os.Stdout
+	}
+
 	header := "\n" + strings.Repeat("=", 60) + "\nSUMMARY\n" + strings.Repeat("=", 60)
-	fmt.Println(header)
-	fmt.Fprintln(r.logFile, header)
+	fmt.Fprintln(w, header)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, header)
+	}
 
 	for _, s := range sections {
 		items := r.filterBy(s.status)
@@ -101,21 +121,27 @@ func (r *Reporter) Summary() {
 		}
 
 		heading := fmt.Sprintf("\n%s %s (%d)", s.icon, s.label, len(items))
-		fmt.Println(heading)
-		fmt.Fprintln(r.logFile, heading)
+		fmt.Fprintln(w, heading)
+		if r.logFile != nil {
+			fmt.Fprintln(r.logFile, heading)
+		}
 
 		for _, res := range items {
 			line := fmt.Sprintf("    • %s", res.Name)
 			if res.Detail != "" {
 				line += fmt.Sprintf(": %s", res.Detail)
 			}
-			fmt.Println(line)
-			fmt.Fprintln(r.logFile, line)
+			fmt.Fprintln(w, line)
+			if r.logFile != nil {
+				fmt.Fprintln(r.logFile, line)
+			}
 		}
 	}
 
-	fmt.Println()
-	fmt.Fprintln(r.logFile)
+	fmt.Fprintln(w)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile)
+	}
 }
 
 // HasFailures returns true if any item failed or was skipped due to a missing dependency.
