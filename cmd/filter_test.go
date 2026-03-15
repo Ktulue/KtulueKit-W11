@@ -118,6 +118,20 @@ func TestUpgradeOnlyFlagsError_NeitherSet(t *testing.T) {
 	}
 }
 
+func TestOutputFormatFlagsError_InvalidFormat(t *testing.T) {
+	if err := outputFormatError("xml"); err == nil {
+		t.Fatal("want error for unsupported format 'xml', got nil")
+	}
+}
+
+func TestOutputFormatFlagsError_ValidFormats(t *testing.T) {
+	for _, f := range []string{"", "json", "md"} {
+		if err := outputFormatError(f); err != nil {
+			t.Errorf("want no error for format %q, got %v", f, err)
+		}
+	}
+}
+
 func TestAllConfigIDs_ExcludeFiltering(t *testing.T) {
 	cfg := &config.Config{
 		Packages: []config.Package{{ID: "Git.Git"}, {ID: "7zip.7zip"}},
