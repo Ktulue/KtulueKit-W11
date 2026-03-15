@@ -32,43 +32,67 @@
 
 <style>
   .item-row {
+    --item-accent: var(--color-accent);
     display: flex;
     align-items: center;
-    padding: 4px 8px;
-    gap: 8px;
+    padding: var(--spacing-xs) var(--spacing-xl);
+    gap: var(--spacing-md);
+    border-radius: var(--radius);
+    transition: background 100ms ease;
   }
+
+  .item-row:hover {
+    background: var(--color-bg-hover);
+  }
+
+  .item-row.uninstall-mode {
+    --item-accent: var(--color-danger);
+  }
+
   label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--spacing-sm);
     cursor: pointer;
     flex: 1;
+    font-size: var(--font-size-base);
   }
-  input[type='checkbox']:checked { accent-color: #0e7fd4; }
-  .uninstall-mode input[type='checkbox']:checked { accent-color: #ff6b6b; }
+
+  input[type='checkbox'] {
+    cursor: pointer;
+    accent-color: var(--item-accent);
+  }
+
+  .name {
+    color: var(--color-text-primary);
+  }
+
   .tooltip-trigger {
     position: relative;
     cursor: help;
-    color: #888;
-    font-size: 12px;
-    border: 1px solid #555;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    border: 1px solid var(--color-border-input);
     border-radius: 50%;
     width: 16px;
     height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
+
   .tooltip {
     position: absolute;
     right: 0;
     top: 20px;
-    background: #2a2a2a;
-    border: 1px solid #555;
-    border-radius: 4px;
-    padding: 8px;
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border-input);
+    border-radius: var(--radius);
+    padding: var(--spacing-md);
     width: 260px;
-    font-size: 12px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
     z-index: 100;
     white-space: normal;
     line-height: 1.4;

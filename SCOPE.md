@@ -1,58 +1,49 @@
 # Scope Contract
-**Task:** Add config-scoped uninstall (CLI + GUI tabs) | **Plan:** `docs/superpowers/plans/2026-03-14-uninstall.md` | **Date:** 2026-03-14 | **Status:** ACTIVE
+**Task:** Impeccable UI — apply suite design system across all KtulueKit-W11 Svelte screens | **Plan:** `docs/superpowers/plans/2026-03-14-impeccable-ui.md` | **Date:** 2026-03-14 | **Status:** CLOSED — 1 change logged
 
 ## In Scope
 
 - **Files:**
-  - `internal/config/schema.go` — add `UninstallCmd string` to `Command`
-  - `internal/config/schema_test.go` — 2 round-trip tests
-  - `internal/state/state.go` — add `DeleteSucceeded(id string)`
-  - `internal/state/state_test.go` — 2 tests
-  - `internal/installer/winget.go` — add `UninstallPackage()`
-  - `internal/installer/winget_test.go` — dry-run and skip tests
-  - `internal/installer/command.go` — add `RunUninstallCommand()`
-  - `internal/installer/command_test.go` — 3 tests
-  - `internal/installer/extension.go` — add `UninstallExtension()`; add `"sort"` import
-  - `internal/installer/extension_test.go` — 2 tests
-  - `internal/runner/runner.go` — add `RunUninstall()` method
-  - `cmd/uninstall.go` — new file, `uninstall` cobra subcommand
-  - `cmd/uninstall_test.go` — 4 tests for `buildUninstallList`
-  - `cmd/main.go` — add `root.AddCommand(uninstallCmd)` (plan says "no changes" but local `root` var requires it)
-  - `cmd/helpers.go` — add `resolveFilter`, `parseIDList`, `buildSelectedMap` helpers (plan provides inline fallbacks; helpers.go is their natural home)
-  - `app.go` — fix `SetPauseResponse` latent bug in `StartInstall`; add `StartUninstall()` and `GetInstalledItems()`
-  - `frontend/src/screens/SelectionScreen.svelte` — Install/Uninstall tab bar, scan logic, uninstall trigger
-  - `frontend/src/components/ItemRow.svelte` — add `mode` prop for accent color switching
-  - `TODO.md` — mark uninstall items done
+  - `frontend/src/App.svelte`
+  - `frontend/src/screens/SelectionScreen.svelte`
+  - `frontend/src/screens/ProgressScreen.svelte`
+  - `frontend/src/screens/SummaryScreen.svelte`
+  - `frontend/src/components/CategoryAccordion.svelte`
+  - `frontend/src/components/ItemRow.svelte`
+  - `frontend/src/components/ProgressItem.svelte`
 
 - **Features / Criteria:**
-  - `UninstallCmd` schema field on `config.Command`
-  - `state.DeleteSucceeded()` removes ID and persists
-  - `UninstallPackage`: winget uninstall, dry-run, check-based skip
-  - `RunUninstallCommand`: T4/scrape-URL skip, no-uninstall-cmd skip, dry-run, shell run
-  - `UninstallExtension`: url-mode skip, force-mode registry removal + renumber
-  - `runner.RunUninstall()`: flat iteration (not phase-based), per-tier dispatch, state clearing on success
-  - `ktuluekit uninstall` CLI with `--only`, `--exclude`, `--profile`, `--dry-run`, confirmation gate, non-TTY auto-continue
-  - `App.StartUninstall()` + `App.GetInstalledItems()` Wails bindings
-  - Install/Uninstall tab bar in SelectionScreen
+  - Task 1 — `App.svelte`: Nunito Google Fonts `@import`; all design tokens as CSS custom properties on `:root`; `var(--font-primary)` on body; `var(--color-bg-primary)` on root container
+  - Task 2 — `SelectionScreen.svelte`: All hardcoded values → token vars; tab active indicator `--color-accent` (install) / `--color-danger` (uninstall); action button `--color-accent` / `--color-danger-action`; disabled → `--color-accent-disabled`; tab transition 100–150ms ease-out; button hover 100ms; profile button hover 100ms
+  - Task 3 — `ProgressScreen.svelte`: All tokens; feed bg `--color-bg-secondary`; elapsed → `--color-text-tertiary` + `--font-size-sm`; Reboot Now button → `--color-accent`; new feed items fade-in 150ms; reboot dialog fade-in 100ms
+  - Task 4 — `SummaryScreen.svelte`: All tokens; Succeeded header `--color-accent`; Failed `--color-danger`; Skipped `--color-text-secondary`; tinted badge fills; categories stagger-fade on mount (150ms, 50ms stagger)
+  - Task 5 — `CategoryAccordion.svelte`: All tokens; header bg `--color-bg-secondary`; chevron `--color-text-secondary`; hover `--color-bg-hover` 100ms ease; no colorize/animate pass
+  - Task 6 — `ItemRow.svelte`: All tokens; local `--item-accent` CSS var (defaults `--color-accent`, overridden to `--color-danger` in uninstall mode); CSS transitions 100ms on hover/checkbox; no animate pass
+  - Task 7 — `ProgressItem.svelte`: All tokens; success icon `--color-accent`; failure `--color-danger`; pending `--color-text-secondary`; no colorize/animate pass
+  - Task 8 — Audit: flag remaining hardcoded hex/magic numbers, spacing inconsistencies, animation timing mismatches; apply minimal fixes
 
-- **Explicit Boundaries (plan corrections pre-approved):**
-  - `reporter.New` calls must include `io.Writer` second arg (plan omits it; already fixed in codebase)
-  - `rep.Summary()` not `rep.PrintSummary()` (plan typo)
-  - Package-level var is `profileName` not `profileFlag`
-  - `rootCmd.AddCommand` in `init()` won't work — use `root.AddCommand(uninstallCmd)` in `main()` instead
-  - `config.Load` (single file) used in app.go — matches plan's `StartUninstall` code
+- **Explicit Boundaries:**
+  - Purely visual — zero behavioral changes to any component
+  - No Go or Wails binding changes
+  - No new files (tokens live on `:root` in App.svelte per plan — no shared `tokens.css`)
+  - Verification steps (`wails dev`) are manual — user confirms visually after PR
 
 ## Out of Scope
-- Parallel uninstall
-- Uninstall for T4 (scrape-download) items — always skipped by design
-- Atomic registry renumber for extension uninstall — non-atomic/best-effort by design
-- Any other CLI subcommands or flags not listed above
-- Any refactoring of existing install code
+
+- Any Go backend changes
+- New shared CSS files (`tokens.css` — future work)
+- Behavioral changes to install/uninstall flow, state, or event handling
+- `feat/unit-tests` content (Track 5 not yet done — no UI changes, does not block this track)
+
+## Prerequisite Note
+
+`feat/unit-tests` (Track 5) is not yet merged. Per plan it's a prerequisite, but it contains **no UI changes**. Proceeding per user's "ok, let's tackle track4" instruction.
 
 # Scope Change Log
 | # | Category | What | Why | Decision | Outcome |
 |---|----------|------|-----|----------|---------|
-| 1 | user-expansion | Add rustup-init.exe to ktuluekit.json config | User requested during uninstall track | Defer | Follow-up #1 |
+| 1 | opportunistic | Fix `8px` progress-bar height → `var(--spacing-md)` | Audit flagged exact token match was available | Permit | Applied in audit commit |
 
 # Follow-up Tasks
-- [ ] Add `rustup-init.exe` as a scrape-download Command entry in `ktuluekit.json` — download URL from https://rustup.rs/ — scope change #1
+- [ ] Add `rustup-init.exe` as a scrape-download Command entry in `ktuluekit.json` — from https://rustup.rs/ — deferred from feat/uninstall
+- [ ] Centralize design tokens into `tokens.css` — `:root` in App.svelte is the step forward per this plan; full centralization is future work (noted in CLAUDE.md)

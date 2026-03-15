@@ -39,30 +39,62 @@
 </div>
 
 <style>
-  .accordion { margin-bottom: 4px; }
+  .accordion {
+    margin-bottom: var(--spacing-xs);
+  }
+
   .header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #2a2a2a;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
     cursor: pointer;
     user-select: none;
-    border-radius: 4px;
+    transition: background 100ms ease;
   }
-  .header:hover { background: #333; }
-  .arrow { font-size: 10px; color: #888; }
-  .cat-name { font-weight: 600; flex: 1; }
-  .count { color: #888; font-size: 13px; }
+
+  .header:hover {
+    background: var(--color-bg-hover);
+  }
+
+  .arrow {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    min-width: 10px;
+    text-align: center;
+  }
+
+  .cat-name {
+    font-weight: 600;
+    flex: 1;
+    font-size: var(--font-size-base);
+  }
+
+  .count {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
   .select-all {
-    font-size: 12px;
+    font-size: var(--font-size-sm);
     background: transparent;
-    border: 1px solid #555;
-    color: #aaa;
-    padding: 2px 8px;
-    border-radius: 3px;
+    border: 1px solid var(--color-border-input);
+    color: var(--color-text-tertiary);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius);
     cursor: pointer;
+    transition: border-color 100ms ease, color 100ms ease;
   }
-  .select-all:hover { border-color: #aaa; color: #fff; }
-  .items { padding-left: 8px; }
+
+  .select-all:hover {
+    border-color: var(--color-text-primary);
+    color: var(--color-text-primary);
+  }
+
+  .items {
+    padding-left: var(--spacing-md);
+  }
 </style>

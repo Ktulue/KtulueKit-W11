@@ -1,5 +1,6 @@
 <script>
   import { afterUpdate } from 'svelte'
+  import { fade } from 'svelte/transition'
   import ProgressItem from '../components/ProgressItem.svelte'
   import { ConfirmReboot, CancelReboot } from '../../wailsjs/go/main/App'
 
@@ -28,12 +29,14 @@
 
   <div class="feed" bind:this={feedEl}>
     {#each events as event, i (i)}
-      <ProgressItem {event} />
+      <div in:fade={{ duration: 150 }}>
+        <ProgressItem {event} />
+      </div>
     {/each}
   </div>
 
   {#if rebootEvent}
-    <div class="reboot-modal">
+    <div class="reboot-modal" in:fade={{ duration: 100 }}>
       <h3>{rebootEvent.Name} requires a reboot</h3>
       <p>The auto-resume task has been registered and will run after login.</p>
       <div class="modal-buttons">
@@ -45,56 +48,101 @@
 </div>
 
 <style>
-  .screen { display: flex; flex-direction: column; height: 100vh; }
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
   header {
-    padding: 12px 20px;
-    background: #111;
-    border-bottom: 1px solid #333;
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacing-lg);
   }
-  h2 { margin: 0; font-size: 16px; }
+
+  h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+  }
+
   .progress-bar-wrap {
     flex: 1;
-    background: #333;
-    border-radius: 4px;
-    height: 8px;
+    background: var(--color-border);
+    border-radius: var(--radius);
+    height: var(--spacing-md);
     overflow: hidden;
   }
+
   .progress-bar {
     height: 100%;
-    background: #0e7fd4;
+    background: var(--color-accent);
     transition: width 0.3s ease;
   }
-  .progress-label { color: #888; font-size: 13px; min-width: 50px; text-align: right; }
-  .feed { flex: 1; overflow-y: auto; }
+
+  .progress-label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .feed {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--color-bg-secondary);
+  }
+
   .reboot-modal {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: var(--spacing-xl);
   }
-  .reboot-modal h3 { margin: 0; }
-  .modal-buttons { display: flex; gap: 12px; }
+
+  .reboot-modal h3 {
+    margin: 0;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: var(--spacing-lg);
+  }
+
   .reboot-btn {
-    background: #c0392b;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-text-primary);
     border: none;
     padding: 10px 24px;
-    border-radius: 4px;
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
     cursor: pointer;
+    transition: background 100ms ease;
   }
+
+  .reboot-btn:hover {
+    background: var(--color-accent-hover);
+  }
+
   .cancel-btn {
-    background: #2a2a2a;
-    color: #e0e0e0;
-    border: 1px solid #555;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-input);
     padding: 10px 24px;
-    border-radius: 4px;
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
     cursor: pointer;
+    transition: background 100ms ease, border-color 100ms ease;
+  }
+
+  .cancel-btn:hover {
+    background: var(--color-border);
+    border-color: var(--color-text-tertiary);
   }
 </style>
