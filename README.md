@@ -67,10 +67,18 @@ go build -o ktuluekit.exe ./cmd/
 ## CLI Flags
 
 | Flag | Short | Default | Description |
-|------|-------|---------|-------------|
-| `--config` | `-c` | `ktuluekit.json` | Path to config file |
+|---|---|---|---|
+| `--config` | `-c` | `ktuluekit.json` | Path to config file (repeatable: `--config base.json --config extras.json`) |
 | `--dry-run` | `-d` | `false` | Show what would be installed without doing it |
 | `--resume-phase` | | `1` | Skip all phases before this number (for post-reboot resume) |
+| `--profile` | | | Named profile from config to run (mutually exclusive with `--only`) |
+| `--only` | | | Comma-separated IDs to install; skip all others |
+| `--exclude` | | | Comma-separated IDs to skip during install |
+| `--phase` | | `0` (all) | Run only this phase number; 0 runs all phases |
+| `--upgrade-only` | | `false` | Skip uninstalled packages; force upgrade on installed ones |
+| `--no-upgrade` | | `false` | Skip upgrades even if `upgrade_if_installed` is set in config |
+| `--output-format` | | | Summary format: `json` or `md`; progress goes to stderr, summary to stdout |
+| `--no-desktop-shortcuts` | | `false` | Auto-remove desktop shortcuts created by installers (skips prompt) |
 
 ## Config Structure
 
@@ -193,3 +201,11 @@ See `KtulueKit-Project-Document.md` for the full list of design constraints and 
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Support
+
+☕ [Buy me a coffee on Ko-fi](http://ko-fi.com/ktulue)
+
+Created by Ktulue | The Water Father 🌊

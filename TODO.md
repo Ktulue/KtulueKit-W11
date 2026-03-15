@@ -95,7 +95,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **PATH verification post-install** — After all runtimes install, scan for `git`, `node`, `python`, `go`, `rustup`, `pwsh` on PATH. Report gaps explicitly before entering command phases.
 
-- [ ] **Post-install hooks** — Add optional `post_install` command field to Package struct. Runs after successful install (e.g., set a default registry key after an app installs, run a one-time setup command). Not for migrating user data — that's KtulueKit-Migration.
+- [x] **Post-install hooks** — Add optional `post_install` command field to Package struct. Runs after successful install (e.g., set a default registry key after an app installs, run a one-time setup command). Not for migrating user data — that's KtulueKit-Migration.
 
 - [x] **State file relocation** — Move `.ktuluekit-state.json` from CWD to `%LOCALAPPDATA%\KtulueKit\state.json` for reliable discovery regardless of working directory.
 
@@ -107,13 +107,13 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Auto-resume via Scheduled Task** — After triggering a reboot, create a one-shot Windows Scheduled Task (`schtasks /create /sc onlogon /tn KtulueKit-Resume ...`) that runs the resume command at next logon. Delete the task after it runs. Zero-friction reboots.
 
-- [ ] **Unit tests** — Tests for pure functions: `classifyWingetExit`, `buildWingetArgs`, `validate`, `applyDefaults`, `dependenciesMet`, `isAlreadyInstalled`. No OS interaction needed. Catches regressions.
+- [x] **Unit tests** — Tests for pure functions: `classifyWingetExit`, `buildWingetArgs`, `validate`, `applyDefaults`, `dependenciesMet`, `isAlreadyInstalled`. No OS interaction needed. Catches regressions. *(Task 2 addresses winget test gaps)*
 
 - [x] **Bootstrap script** — `setup.ps1` installs Go via winget, builds the binary, and launches it with arg passthrough. README updated to reference it.
 
 - [x] **Config from URL** — `ktuluekit --config https://raw.githubusercontent.com/.../ktuluekit.json` fetches and parses a remote config. Makes it trivial to share configs or pull yours on a fresh machine without cloning.
 
-- [ ] **Summary export formats** — `--output-format json` or `--output-format md` for the summary report. Useful for CI/automation or pasting into a GitHub issue.
+- [x] **Summary export formats** — `--output-format json` or `--output-format md` for the summary report. Useful for CI/automation or pasting into a GitHub issue.
 
 - [x] **Export/scan mode** — `ktuluekit export` scans the machine via check commands and generates a `ktuluekit-snapshot.json` from what's currently installed. Replay-ready config and KtulueKit-Migration handoff artifact. Supports `--fast` (state file) and `--output` flags.
 
@@ -129,7 +129,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Config merging** — `--config base.json --config extras.json` layers multiple configs. Last-wins by ID/name. `LoadAll` in config package; `--config` is now a repeatable flag.
 
-- [ ] **Parallel installs** — Run independent packages within the same phase concurrently. Requires careful stdout multiplexing and state locking. Biggest risk: winget itself may not handle concurrent installs gracefully.
+- [x] **Parallel installs** — *Out of scope for v1.0. Winget concurrent install behavior is undefined; deferred to post-v1.0 consideration.*
 
 - [x] **Uninstall / desired-state enforcement** *(high scrutiny — destructive)* — `ktuluekit uninstall` or `--enforce` mode. Scans installed packages against the config/selection and removes anything marked as desired-absent. Key design constraints:
   - Requires an explicit "desired absent" signal — "not selected" ≠ "uninstall." Needs a dedicated flag (`--enforce`) or per-item `"uninstall": true` field to avoid accidental removal.

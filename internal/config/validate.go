@@ -1,6 +1,16 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
+
+// chromeExtIDRe matches the Chrome/Brave extension ID format: exactly 32
+// lowercase a-p characters (base-26 encoded, no shell metacharacters).
+var chromeExtIDRe = regexp.MustCompile(`^[a-p]{32}$`)
+
+// firefoxExtIDRe matches the Firefox AMO add-on slug format.
+var firefoxExtIDRe = regexp.MustCompile(`^[a-z0-9_@.-]+$`)
 
 // ValidationError describes a single config validation problem.
 type ValidationError struct {
@@ -109,9 +119,25 @@ func Validate(cfg *Config) []ValidationError {
 		}
 		if e.ExtensionID == "" {
 			add(fmt.Sprintf("%s(%s).extension_id", prefix, e.ID), "required field 'extension_id' is missing")
-		} else if len(e.ExtensionID) != 32 {
-			add(fmt.Sprintf("%s(%s).extension_id", prefix, e.ID),
-				fmt.Sprintf("extension_id must be 32 characters, got %d", len(e.ExtensionID)))
+		} else {
+			switch e.Browser {
+			case "chrome", "brave":
+				if !chromeExtIDRe.MatchString(e.ExtensionID) {
+					add(fmt.Sprintf("%s(%s).extension_id", prefix, e.ID),
+						"chrome/brave extension_id must be exactly 32 lowercase a-p characters")
+				}
+			case "firefox":
+				if !firefoxExtIDRe.MatchString(e.ExtensionID) {
+					add(fmt.Sprintf("%s(%s).extension_id", prefix, e.ID),
+						"firefox extension_id must match ^[a-z0-9_@.-]+$ (AMO slug format)")
+				}
+			default:
+				// Unknown or empty browser: fall back to the original 32-char length check.
+				if len(e.ExtensionID) != 32 {
+					add(fmt.Sprintf("%s(%s).extension_id", prefix, e.ID),
+						fmt.Sprintf("extension_id must be 32 characters, got %d", len(e.ExtensionID)))
+				}
+			}
 		}
 		if ids[e.ID] {
 			add(fmt.Sprintf("%s.id", prefix), fmt.Sprintf("duplicate ID %q", e.ID))
