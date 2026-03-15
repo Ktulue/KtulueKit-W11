@@ -81,16 +81,56 @@
 </main>
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+
+  :root {
+    /* Colors */
+    --color-bg-primary: #1a1a1a;
+    --color-bg-secondary: #111;
+    --color-bg-hover: #2a2a2a;
+    --color-border: #333;
+    --color-border-input: #555;
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #888;
+    --color-text-tertiary: #aaa;
+    --color-accent: #0e7fd4;
+    --color-accent-hover: #1290e8;
+    --color-accent-disabled: #444;
+    --color-danger: #ff6b6b;
+    --color-danger-action: #c0392b;
+
+    /* Spacing (4px grid) */
+    --spacing-xs: 4px;
+    --spacing-sm: 6px;
+    --spacing-md: 8px;
+    --spacing-lg: 12px;
+    --spacing-xl: 16px;
+    --spacing-2xl: 20px;
+
+    /* Shape */
+    --radius: 4px;
+
+    /* Typography */
+    --font-primary: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-base: 15px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+  }
+
   :global(body) {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #1a1a1a;
-    color: #e0e0e0;
+    font-family: var(--font-primary);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
   }
+
   main {
     height: 100vh;
     overflow: hidden;
   }
+
   .error-screen {
     display: flex;
     flex-direction: column;
@@ -98,6 +138,6 @@
     justify-content: center;
     height: 100vh;
     gap: 1rem;
-    color: #ff6b6b;
+    color: var(--color-danger);
   }
 </style>
