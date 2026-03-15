@@ -277,6 +277,148 @@ func TestLoadAll_EmptyPaths(t *testing.T) {
 	}
 }
 
+func TestMergeProfiles(t *testing.T) {
+	tests := []struct {
+		name         string
+		base         []Profile
+		src          []Profile
+		wantNames    []string
+		wantIDCounts map[string]int // profile name -> expected len(IDs)
+	}{
+		{
+			name:      "no overlap — both profiles kept",
+			base:      []Profile{{Name: "Full", IDs: []string{"a", "b"}}},
+			src:       []Profile{{Name: "Minimal", IDs: []string{"a"}}},
+			wantNames: []string{"Full", "Minimal"},
+		},
+		{
+			name: "last-wins on name collision",
+			base: []Profile{{Name: "Full", IDs: []string{"a", "b"}}},
+			src:  []Profile{{Name: "Full", IDs: []string{"a", "b", "c"}}},
+			wantNames:    []string{"Full"},
+			wantIDCounts: map[string]int{"Full": 3},
+		},
+		{
+			name: "position preserved — collision stays at base index",
+			base: []Profile{
+				{Name: "Full", IDs: []string{"a"}},
+				{Name: "Minimal", IDs: []string{"b"}},
+			},
+			src: []Profile{
+				{Name: "Full", IDs: []string{"a", "b", "c"}},
+			},
+			wantNames:    []string{"Full", "Minimal"},
+			wantIDCounts: map[string]int{"Full": 3},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mergeProfiles(tt.base, tt.src)
+			if len(got) != len(tt.wantNames) {
+				t.Fatalf("len = %d, want %d (got names: %v)", len(got), len(tt.wantNames), extractProfileNames(got))
+			}
+			for i, name := range tt.wantNames {
+				if got[i].Name != name {
+					t.Errorf("[%d] Name = %q, want %q", i, got[i].Name, name)
+				}
+			}
+			for name, wantCount := range tt.wantIDCounts {
+				for _, p := range got {
+					if p.Name == name && len(p.IDs) != wantCount {
+						t.Errorf("profile %q: len(IDs) = %d, want %d", name, len(p.IDs), wantCount)
+					}
+				}
+			}
+		})
+	}
+}
+
+// extractProfileNames is a test helper that extracts profile names for error messages.
+func extractProfileNames(profiles []Profile) []string {
+	names := make([]string, len(profiles))
+	for i, p := range profiles {
+		names[i] = p.Name
+	}
+	return names
+}
+
+func TestMergeSettings(t *testing.T) {
+	tests := []struct {
+		name               string
+		dst                Settings
+		src                Settings
+		wantLogDir         string
+		wantRetryCount     int
+		wantTimeout        int
+		wantScope          string
+		wantExtMode        string
+		wantUpgradeEnabled bool
+	}{
+		{
+			name:           "src non-zero overwrites dst",
+			dst:            Settings{LogDir: "./logs", RetryCount: 2, DefaultTimeoutSeconds: 60, DefaultScope: "machine", ExtensionMode: "url"},
+			src:            Settings{LogDir: "./new-logs", RetryCount: 5},
+			wantLogDir:     "./new-logs",
+			wantRetryCount: 5,
+			wantTimeout:    60,
+			wantScope:      "machine",
+			wantExtMode:    "url",
+		},
+		{
+			name:           "src zero fields do not overwrite dst",
+			dst:            Settings{LogDir: "./logs", RetryCount: 3},
+			src:            Settings{},
+			wantLogDir:     "./logs",
+			wantRetryCount: 3,
+		},
+		{
+			name:               "UpgradeIfInstalled one-way ratchet: src true sets dst",
+			dst:                Settings{UpgradeIfInstalled: false},
+			src:                Settings{UpgradeIfInstalled: true},
+			wantUpgradeEnabled: true,
+		},
+		{
+			name:               "UpgradeIfInstalled one-way ratchet: src false cannot clear dst",
+			dst:                Settings{UpgradeIfInstalled: true},
+			src:                Settings{UpgradeIfInstalled: false},
+			wantUpgradeEnabled: true,
+		},
+		{
+			name:               "UpgradeIfInstalled both false stays false",
+			dst:                Settings{UpgradeIfInstalled: false},
+			src:                Settings{UpgradeIfInstalled: false},
+			wantUpgradeEnabled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dst := tt.dst
+			mergeSettings(&dst, &tt.src)
+
+			if tt.wantLogDir != "" && dst.LogDir != tt.wantLogDir {
+				t.Errorf("LogDir = %q, want %q", dst.LogDir, tt.wantLogDir)
+			}
+			if tt.wantRetryCount != 0 && dst.RetryCount != tt.wantRetryCount {
+				t.Errorf("RetryCount = %d, want %d", dst.RetryCount, tt.wantRetryCount)
+			}
+			if tt.wantTimeout != 0 && dst.DefaultTimeoutSeconds != tt.wantTimeout {
+				t.Errorf("DefaultTimeoutSeconds = %d, want %d", dst.DefaultTimeoutSeconds, tt.wantTimeout)
+			}
+			if tt.wantScope != "" && dst.DefaultScope != tt.wantScope {
+				t.Errorf("DefaultScope = %q, want %q", dst.DefaultScope, tt.wantScope)
+			}
+			if tt.wantExtMode != "" && dst.ExtensionMode != tt.wantExtMode {
+				t.Errorf("ExtensionMode = %q, want %q", dst.ExtensionMode, tt.wantExtMode)
+			}
+			if dst.UpgradeIfInstalled != tt.wantUpgradeEnabled {
+				t.Errorf("UpgradeIfInstalled = %v, want %v", dst.UpgradeIfInstalled, tt.wantUpgradeEnabled)
+			}
+		})
+	}
+}
+
 func TestMergePackages(t *testing.T) {
 	tests := []struct {
 		name        string
