@@ -13,7 +13,7 @@ All five finishing sprint tracks are merged to main. This spec covers the final 
 **Three sequential phases:**
 1. TODO verification — reconcile every item against actual shipped code
 2. Security review → triage → fixes → tests
-3. v1.0 wrap-up — worktree cleanup, README check, tag
+3. v1.0 wrap-up — worktree cleanup, README update, tag + push
 
 **Branch:** `chore/v1-wrap-up` — all work lands here, squash-merged to main before tagging.
 
@@ -29,10 +29,10 @@ Systematically confirm every item in `TODO.md` reflects actual codebase state.
 
 | Item | Committed in | Action |
 |---|---|---|
-| Post-install hooks | a9ad01d (feat/cli-polish) | Mark `[x]` |
-| Summary export formats | a9ad01d (feat/cli-polish) | Mark `[x]` |
-| Unit tests | e542f47 (feat/unit-tests) | Mark `[x]` |
-| Parallel installs | Explicitly out of scope (finishing sprint spec) | Mark `[x]` with "Out of scope" note |
+| Post-install hooks | a9ad01d (feat/cli-polish) | Verify `PostInstall` field in `schema.go` + hook execution in runner, then mark `[x]` |
+| Summary export formats | a9ad01d (feat/cli-polish) | Verify `--output-format` in `cmd/main.go` + reporter, then mark `[x]` |
+| Unit tests | e542f47 (feat/unit-tests) | **Verify** that `classifyWingetExit` and `buildWingetArgs` (called out by name in the TODO item) have test coverage before marking `[x]`; if missing, write those tests in this pass |
+| Parallel installs | Explicitly out of scope per finishing sprint spec | Mark `[x]` with note: "Out of scope for v1.0 — winget concurrent install behavior is undefined; deferred to post-v1.0 consideration" |
 
 **Deliverable:** `TODO.md` fully reconciled, committed on `chore/v1-wrap-up`.
 
@@ -61,7 +61,7 @@ Each finding receives one of three verdicts:
 
 - **`fix`** — genuine vulnerability; patch required
 - **`test`** — correct behavior but needs a regression test to stay that way
-- **`accept`** — acknowledged risk; design decision (personal tool, no multi-user threat model); document in a code comment
+- **`accept`** — acknowledged risk; design decision (personal tool, no multi-user threat model); document in code with `// SECURITY-ACCEPT: <one-line rationale>`
 
 ### Phase 2c — Fixes + Tests
 
@@ -75,27 +75,30 @@ Each finding receives one of three verdicts:
 
 ## Phase 3: v1.0 Wrap-Up
 
-After security work is merged:
+After security work is committed:
 
-1. **Worktree cleanup** — remove `.worktrees/polish-sprint/` and `.worktrees/feat-gui/` (leftover from previous feature work)
-2. **README check** — verify Ko-fi support section (`ko-fi.com/ktulue`) exists at bottom; append if missing
-3. **Merge `chore/v1-wrap-up` → main** — squash merge, `/security-review` run before PR
-4. **Tag `v1.0`** — `git tag v1.0` on main post-merge
-5. **Final status check** — confirm clean tree, no stray files or branches
+1. **Worktree cleanup** — run `git worktree remove .worktrees/polish-sprint` and `git worktree remove .worktrees/feat-gui` (deregisters from git metadata and removes directories); delete local branches `maint/polish-sprint` and `feat/gui` with `git branch -d` if no longer needed
+2. **README update** — verify Ko-fi support section (`ko-fi.com/ktulue`) exists at bottom; append if missing. Update the CLI flags table to include all shipped flags: `--profile`, `--only`, `--exclude`, `--phase`, `--upgrade-only`, `--no-upgrade`, `--output-format`, `--no-desktop-shortcuts`
+3. **Merge `chore/v1-wrap-up` → main** — squash merge via PR; run `/security-review` before opening PR
+4. **Tag and push** — `git tag v1.0` on main post-merge, then `git push origin v1.0`
+5. **Branch sweep** — delete all merged feature branches that are no longer needed: `feat/cli-features`, `feat/cli-polish`, `feat/config-url`, `feat/export-scan`, `feat/finish-sprint`, `feat/impeccable-ui`, `feat/scrape-download-installer`, `feat/small-wins`, `feat/uninstall`, `feat/unit-tests`, `maint/polish-sprint`, `feat/gui` (local only; remote tracking refs pruned via `git remote prune origin`)
+6. **Final status check** — confirm clean tree, no stray worktrees, no local feature branches remaining
 
-**Deliverable:** Tagged `v1.0` on main. Clean repo. KtulueKit-Migration handoff ready.
+**Deliverable:** Tagged and pushed `v1.0` on main. Clean repo. KtulueKit-Migration handoff ready.
 
 ---
 
 ## Success Criteria
 
 - [ ] Every `TODO.md` item is `[x]` with accurate status
+- [ ] `classifyWingetExit` and `buildWingetArgs` confirmed covered by tests (or tests written)
 - [ ] All security findings triaged into fix / test / accept
 - [ ] No open `fix` findings remain unpatched
 - [ ] Regression tests written for all `test` findings
-- [ ] `accept` findings documented with code comments
-- [ ] `.worktrees/polish-sprint/` and `.worktrees/feat-gui/` removed
+- [ ] `accept` findings documented with `// SECURITY-ACCEPT:` comments
+- [ ] Worktrees removed via `git worktree remove`; local branches cleaned up
 - [ ] README.md contains Ko-fi support section
+- [ ] README.md CLI flags table is current with all shipped flags
 - [ ] `chore/v1-wrap-up` squash-merged to main
-- [ ] `v1.0` tag on main
+- [ ] `v1.0` tag created and pushed to origin
 - [ ] Clean `git status` on main post-tag
