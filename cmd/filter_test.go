@@ -118,6 +118,24 @@ func TestUpgradeOnlyFlagsError_NeitherSet(t *testing.T) {
 	}
 }
 
+func TestProfileFlagsMutualExclusion(t *testing.T) {
+	if err := profileFlagsError("streaming", "Git.Git"); err == nil {
+		t.Fatal("want error when --profile and --only are both set, got nil")
+	}
+}
+
+func TestProfileFlagsError_ProfileOnly(t *testing.T) {
+	if err := profileFlagsError("streaming", ""); err != nil {
+		t.Fatalf("want no error with only --profile set, got %v", err)
+	}
+}
+
+func TestProfileFlagsError_NeitherSet(t *testing.T) {
+	if err := profileFlagsError("", ""); err != nil {
+		t.Fatalf("want no error with neither flag set, got %v", err)
+	}
+}
+
 func TestOutputFormatFlagsError_InvalidFormat(t *testing.T) {
 	if err := outputFormatError("xml"); err == nil {
 		t.Fatal("want error for unsupported format 'xml', got nil")

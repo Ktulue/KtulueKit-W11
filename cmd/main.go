@@ -30,6 +30,7 @@ var (
 	onlyPhase          int
 	upgradeOnly        bool
 	outputFormat       string // "json" | "md" | "" (default terminal)
+	profileName        string
 )
 
 func main() {
@@ -54,6 +55,7 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().IntVar(&onlyPhase, "phase", 0, "Run only this phase number (0 = run all phases)")
 	root.PersistentFlags().BoolVar(&upgradeOnly, "upgrade-only", false, "Skip packages not yet installed; force upgrade on installed ones")
 	root.Flags().StringVar(&outputFormat, "output-format", "", `Summary format: "json" or "md". Progress goes to stderr; summary goes to stdout.`)
+	root.PersistentFlags().StringVar(&profileName, "profile", "", "Named profile from config to install (mutually exclusive with --only)")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -122,6 +124,16 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	if err := filterFlagsError(onlyIDs, excludeIDs); err != nil {
 		return err
+	}
+	if err := profileFlagsError(profileName, onlyIDs); err != nil {
+		return err
+	}
+	if profileName != "" {
+		ids, err := config.LookupProfile(cfg, profileName)
+		if err != nil {
+			return err
+		}
+		onlyIDs = strings.Join(ids, ",")
 	}
 	if err := phaseFlagsError(onlyPhase, resumePhase); err != nil {
 		return err
@@ -263,6 +275,14 @@ func buildExcludeSet(raw string, all map[string]bool) (remaining map[string]bool
 		delete(remaining, id)
 	}
 	return remaining, unknowns
+}
+
+// profileFlagsError returns an error if --profile and --only are both set.
+func profileFlagsError(profile, only string) error {
+	if profile != "" && only != "" {
+		return fmt.Errorf("--profile and --only are mutually exclusive")
+	}
+	return nil
 }
 
 // outputFormatError returns an error if the requested format is not supported.
