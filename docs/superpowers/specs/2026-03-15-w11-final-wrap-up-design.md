@@ -15,7 +15,7 @@ All five finishing sprint tracks are merged to main. This spec covers the final 
 2. Security review → triage → fixes → tests
 3. v1.0 wrap-up — worktree cleanup, README update, tag + push
 
-**Branch:** `chore/v1-wrap-up` — all work lands here, squash-merged to main before tagging.
+**Branch:** `maint/v1-wrap-up` — all work lands here, squash-merged to main before tagging.
 
 ---
 
@@ -34,7 +34,7 @@ Systematically confirm every item in `TODO.md` reflects actual codebase state.
 | Unit tests | e542f47 (feat/unit-tests) | **Verify** that `classifyWingetExit` and `buildWingetArgs` (called out by name in the TODO item) have test coverage before marking `[x]`; if missing, write those tests in this pass |
 | Parallel installs | Explicitly out of scope per finishing sprint spec | Mark `[x]` with note: "Out of scope for v1.0 — winget concurrent install behavior is undefined; deferred to post-v1.0 consideration" |
 
-**Deliverable:** `TODO.md` fully reconciled, committed on `chore/v1-wrap-up`.
+**Deliverable:** `TODO.md` fully reconciled, committed on `maint/v1-wrap-up`.
 
 ---
 
@@ -65,9 +65,9 @@ Each finding receives one of three verdicts:
 
 ### Phase 2c — Fixes + Tests
 
-- Implement patches for all `fix` items on `chore/v1-wrap-up`
+- Implement patches for all `fix` items on `maint/v1-wrap-up`
 - Write Go tests for all `test` items, following the existing table-driven pattern
-- If any single fix is large enough to warrant isolation, it gets its own branch off `chore/v1-wrap-up`
+- If any single fix is large enough to warrant isolation, it gets its own branch off `maint/v1-wrap-up`
 
 **Deliverable:** All findings triaged; fixes and tests committed; no open `fix` items remaining.
 
@@ -79,7 +79,7 @@ After security work is committed:
 
 1. **Worktree cleanup** — run `git worktree remove .worktrees/polish-sprint` and `git worktree remove .worktrees/feat-gui` (deregisters from git metadata and removes directories); delete local branches `maint/polish-sprint` and `feat/gui` with `git branch -d` if no longer needed
 2. **README update** — verify Ko-fi support section (`ko-fi.com/ktulue`) exists at bottom; append if missing. Update the CLI flags table to include all shipped flags: `--profile`, `--only`, `--exclude`, `--phase`, `--upgrade-only`, `--no-upgrade`, `--output-format`, `--no-desktop-shortcuts`
-3. **Merge `chore/v1-wrap-up` → main** — squash merge via PR; run `/security-review` before opening PR
+3. **Merge `maint/v1-wrap-up` → main** — squash merge via PR; run `/security-review` before opening PR
 4. **Tag and push** — `git tag v1.0` on main post-merge, then `git push origin v1.0`
 5. **Branch sweep** — delete all merged feature branches that are no longer needed: `feat/cli-features`, `feat/cli-polish`, `feat/config-url`, `feat/export-scan`, `feat/finish-sprint`, `feat/impeccable-ui`, `feat/scrape-download-installer`, `feat/small-wins`, `feat/uninstall`, `feat/unit-tests`, `maint/polish-sprint`, `feat/gui` (local only; remote tracking refs pruned via `git remote prune origin`)
 6. **Final status check** — confirm clean tree, no stray worktrees, no local feature branches remaining
@@ -99,6 +99,6 @@ After security work is committed:
 - [ ] Worktrees removed via `git worktree remove`; local branches cleaned up
 - [ ] README.md contains Ko-fi support section
 - [ ] README.md CLI flags table is current with all shipped flags
-- [ ] `chore/v1-wrap-up` squash-merged to main
+- [ ] `maint/v1-wrap-up` squash-merged to main
 - [ ] `v1.0` tag created and pushed to origin
 - [ ] Clean `git status` on main post-tag
