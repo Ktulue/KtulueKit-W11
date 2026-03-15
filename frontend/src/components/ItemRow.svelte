@@ -2,12 +2,13 @@
   export let item       // { ID, Name, Description, Notes }
   export let checked = false
   export let onChange = (id, checked) => {}
+  export let mode = 'install' // 'install' | 'uninstall'
 
   let showTooltip = false
   $: tooltip = item.Description || item.Notes || ''
 </script>
 
-<div class="item-row">
+<div class="item-row" class:uninstall-mode={mode === 'uninstall'}>
   <label>
     <input
       type="checkbox"
@@ -43,6 +44,8 @@
     cursor: pointer;
     flex: 1;
   }
+  input[type='checkbox']:checked { accent-color: #0e7fd4; }
+  .uninstall-mode input[type='checkbox']:checked { accent-color: #ff6b6b; }
   .tooltip-trigger {
     position: relative;
     cursor: help;
