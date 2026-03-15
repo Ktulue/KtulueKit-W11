@@ -241,3 +241,87 @@ func TestUpgradeOnlyFlagsError_Table(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveFilter(t *testing.T) {
+	cfg := &config.Config{
+		Profiles: []config.Profile{
+			{Name: "Gaming", IDs: []string{"Valve.Steam", "Discord.Discord"}},
+			{Name: "Dev", IDs: []string{"Git.Git", "Microsoft.VisualStudioCode"}},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		profile     string
+		only        string
+		wantErr     bool
+		wantNil     bool // true = expect nil map (all items)
+		wantIDs     []string
+		wantMissing []string
+	}{
+		{
+			name:    "profile found returns ID map",
+			profile: "Gaming",
+			only:    "",
+			wantIDs: []string{"Valve.Steam", "Discord.Discord"},
+		},
+		{
+			name:    "profile not found returns error",
+			profile: "NonExistent",
+			only:    "",
+			wantErr: true,
+		},
+		{
+			name:    "profile is case-sensitive — wrong case returns error",
+			profile: "gaming",
+			only:    "",
+			wantErr: true,
+		},
+		{
+			name:    "only flag returns parseIDList result",
+			profile: "",
+			only:    "Git.Git,Mozilla.Firefox",
+			wantIDs: []string{"Git.Git", "Mozilla.Firefox"},
+		},
+		{
+			name:    "neither profile nor only returns nil (all items)",
+			profile: "",
+			only:    "",
+			wantNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveFilter(cfg, tt.profile, tt.only)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("resolveFilter(profile=%q, only=%q): want error, got nil", tt.profile, tt.only)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("resolveFilter unexpected error: %v", err)
+			}
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("want nil map (all items), got %v", got)
+				}
+				return
+			}
+
+			for _, id := range tt.wantIDs {
+				if !got[id] {
+					t.Errorf("expected %q in filter map, not found", id)
+				}
+			}
+			for _, id := range tt.wantMissing {
+				if got[id] {
+					t.Errorf("expected %q absent from filter map, but it was present", id)
+				}
+			}
+		})
+	}
+}
