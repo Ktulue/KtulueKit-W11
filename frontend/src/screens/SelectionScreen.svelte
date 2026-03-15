@@ -171,66 +171,123 @@
     flex-direction: column;
     height: 100vh;
   }
+
   header {
     display: flex;
     align-items: center;
-    padding: 12px 20px;
-    background: #111;
-    border-bottom: 1px solid #333;
-    gap: 16px;
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    gap: var(--spacing-xl);
   }
-  h1 { margin: 0; font-size: 18px; }
-  .profile-bar { display: flex; align-items: center; gap: 8px; }
+
+  h1 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+  }
+
+  .profile-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
   select {
-    background: #2a2a2a;
-    color: #e0e0e0;
-    border: 1px solid #555;
-    padding: 4px 8px;
-    border-radius: 4px;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-input);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius);
+    transition: border-color 100ms ease;
   }
+
+  select:hover {
+    border-color: var(--color-text-tertiary);
+  }
+
   .tab-bar {
     display: flex;
-    border-bottom: 1px solid #333;
-    background: #111;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
   }
+
   .tab {
-    padding: 8px 20px;
+    padding: var(--spacing-md) var(--spacing-2xl);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
     cursor: pointer;
-    color: #888;
-    font-size: 15px;
-    transition: color 100ms ease;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-base);
+    font-family: var(--font-primary);
+    transition: color 100ms ease-out, border-bottom-color 100ms ease-out;
   }
-  .tab.tab-active { color: #0e7fd4; border-bottom-color: #0e7fd4; }
-  .tab.tab-active.tab-uninstall-active { color: #ff6b6b; border-bottom-color: #ff6b6b; }
+
+  .tab.tab-active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
+  .tab.tab-active.tab-uninstall-active {
+    color: var(--color-danger);
+    border-bottom-color: var(--color-danger);
+  }
+
   .categories {
     flex: 1;
     overflow-y: auto;
-    padding: 12px 20px;
+    padding: var(--spacing-lg) var(--spacing-2xl);
   }
-  .scan-state { padding: 32px; text-align: center; color: #888; }
+
+  .scan-state {
+    padding: 32px;
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+
   footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    background: #111;
-    border-top: 1px solid #333;
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
   }
-  .count { color: #888; }
+
+  .count {
+    color: var(--color-text-secondary);
+  }
+
   .start-btn {
-    background: #0e7fd4;
-    color: white;
+    background: var(--color-accent);
+    color: var(--color-text-primary);
     border: none;
     padding: 10px 28px;
-    border-radius: 4px;
-    font-size: 15px;
+    border-radius: var(--radius);
+    font-size: var(--font-size-base);
+    font-family: var(--font-primary);
     cursor: pointer;
+    transition: background 100ms ease, transform 80ms ease;
   }
-  .start-btn:disabled { background: #444; cursor: not-allowed; }
-  .start-btn:not(:disabled):hover { background: #1290e8; }
-  .uninstall-btn { background: #c0392b; }
-  .uninstall-btn:not(:disabled):hover { background: #e74c3c; }
+
+  .start-btn:disabled {
+    background: var(--color-accent-disabled);
+    cursor: not-allowed;
+  }
+
+  .start-btn:not(:disabled):hover {
+    background: var(--color-accent-hover);
+  }
+
+  .start-btn:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  .uninstall-btn {
+    background: var(--color-danger-action);
+  }
+
+  .uninstall-btn:not(:disabled):hover {
+    background: #e74c3c;
+  }
 </style>
