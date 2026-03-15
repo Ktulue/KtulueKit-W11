@@ -111,7 +111,7 @@ Organized from least extensive to most extensive changes. Each section groups it
 
 - [x] **Bootstrap script** — `setup.ps1` installs Go via winget, builds the binary, and launches it with arg passthrough. README updated to reference it.
 
-- [ ] **Config from URL** — `ktuluekit --config https://raw.githubusercontent.com/.../ktuluekit.json` fetches and parses a remote config. Makes it trivial to share configs or pull yours on a fresh machine without cloning.
+- [x] **Config from URL** — `ktuluekit --config https://raw.githubusercontent.com/.../ktuluekit.json` fetches and parses a remote config. Makes it trivial to share configs or pull yours on a fresh machine without cloning.
 
 - [ ] **Summary export formats** — `--output-format json` or `--output-format md` for the summary report. Useful for CI/automation or pasting into a GitHub issue.
 

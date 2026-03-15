@@ -10,7 +10,13 @@ import (
 )
 
 func runList(cmd *cobra.Command, args []string) error {
-	cfg, err := config.LoadAll(configPaths)
+	resolved, cleanup, err := resolveConfigPaths(configPaths)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	cfg, err := config.LoadAll(resolved)
 	if err != nil {
 		return fmt.Errorf("config error: %w", err)
 	}
