@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,6 +29,8 @@ var (
 	excludeIDs         string
 	onlyPhase          int
 	upgradeOnly        bool
+	outputFormat       string // "json" | "md" | "" (default terminal)
+	profileName        string
 )
 
 func main() {
@@ -51,6 +54,8 @@ Windows 11 software stack in dependency order across three tiers:
 	root.PersistentFlags().StringVar(&excludeIDs, "exclude", "", "comma-separated IDs to exclude from install")
 	root.PersistentFlags().IntVar(&onlyPhase, "phase", 0, "Run only this phase number (0 = run all phases)")
 	root.PersistentFlags().BoolVar(&upgradeOnly, "upgrade-only", false, "Skip packages not yet installed; force upgrade on installed ones")
+	root.Flags().StringVar(&outputFormat, "output-format", "", `Summary format: "json" or "md". Progress goes to stderr; summary goes to stdout.`)
+	root.PersistentFlags().StringVar(&profileName, "profile", "", "Named profile from config to install (mutually exclusive with --only)")
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
@@ -120,14 +125,31 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if err := filterFlagsError(onlyIDs, excludeIDs); err != nil {
 		return err
 	}
+	if err := profileFlagsError(profileName, onlyIDs); err != nil {
+		return err
+	}
+	if profileName != "" {
+		ids, err := config.LookupProfile(cfg, profileName)
+		if err != nil {
+			return err
+		}
+		onlyIDs = strings.Join(ids, ",")
+	}
 	if err := phaseFlagsError(onlyPhase, resumePhase); err != nil {
 		return err
 	}
 	if err := upgradeOnlyFlagsError(upgradeOnly, noUpgrade); err != nil {
 		return err
 	}
+	if err := outputFormatError(outputFormat); err != nil {
+		return err
+	}
 
-	rep, err := reporter.New(cfg.Settings.LogDir)
+	progressOut := io.Writer(os.Stdout)
+	if outputFormat != "" {
+		progressOut = os.Stderr
+	}
+	rep, err := reporter.New(cfg.Settings.LogDir, progressOut)
 	if err != nil {
 		return fmt.Errorf("reporter error: %w", err)
 	}
@@ -197,6 +219,18 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	rep.Summary()
 	fmt.Printf("Total elapsed: %s\n", time.Since(runStart).Round(time.Second))
 
+	switch outputFormat {
+	case "json":
+		data, err := rep.SummaryJSON()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error marshalling JSON summary: %v\n", err)
+		} else {
+			os.Stdout.Write(data)
+		}
+	case "md":
+		fmt.Fprint(os.Stdout, rep.SummaryMD())
+	}
+
 	// Only clear state on a fully clean, complete run.
 	// Preserve state if there were failures OR if the run was interrupted early.
 	if !dryRun && !rep.HasFailures() && !r.WasInterrupted() {
@@ -241,6 +275,24 @@ func buildExcludeSet(raw string, all map[string]bool) (remaining map[string]bool
 		delete(remaining, id)
 	}
 	return remaining, unknowns
+}
+
+// profileFlagsError returns an error if --profile and --only are both set.
+func profileFlagsError(profile, only string) error {
+	if profile != "" && only != "" {
+		return fmt.Errorf("--profile and --only are mutually exclusive")
+	}
+	return nil
+}
+
+// outputFormatError returns an error if the requested format is not supported.
+func outputFormatError(format string) error {
+	switch format {
+	case "", "json", "md":
+		return nil
+	default:
+		return fmt.Errorf("--output-format %q is not supported; valid values: json, md", format)
+	}
 }
 
 // filterFlagsError returns an error if --only and --exclude are both set.

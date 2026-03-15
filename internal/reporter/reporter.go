@@ -1,7 +1,9 @@
 package reporter
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,12 +34,18 @@ type Result struct {
 
 // Reporter collects results and writes the final summary.
 type Reporter struct {
-	results []Result
-	logDir  string
-	logFile *os.File
+	results        []Result
+	logDir         string
+	logFile        *os.File
+	progressWriter io.Writer
 }
 
-func New(logDir string) (*Reporter, error) {
+// New creates a Reporter that writes live progress to progressWriter.
+// Pass os.Stdout for normal CLI use; pass os.Stderr when --output-format is set.
+func New(logDir string, progressWriter io.Writer) (*Reporter, error) {
+	if progressWriter == nil {
+		progressWriter = os.Stdout
+	}
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, fmt.Errorf("cannot create log directory: %w", err)
 	}
@@ -54,12 +62,12 @@ func New(logDir string) (*Reporter, error) {
 	fmt.Fprintln(f, strings.Repeat("=", 60))
 	fmt.Fprintln(f)
 
-	fmt.Printf("Logging to: %s\n\n", logPath)
+	fmt.Fprintf(progressWriter, "Logging to: %s\n\n", logPath)
 
-	return &Reporter{logDir: logDir, logFile: f}, nil
+	return &Reporter{logDir: logDir, logFile: f, progressWriter: progressWriter}, nil
 }
 
-// Add records a result and streams it to stdout + log file in real time.
+// Add records a result and streams it to progressWriter + log file in real time.
 func (r *Reporter) Add(res Result) {
 	r.results = append(r.results, res)
 
@@ -69,8 +77,14 @@ func (r *Reporter) Add(res Result) {
 		line += fmt.Sprintf("  — %s", res.Detail)
 	}
 
-	fmt.Println(line)
-	fmt.Fprintln(r.logFile, line)
+	w := r.progressWriter
+	if w == nil {
+		w = os.Stdout
+	}
+	fmt.Fprintln(w, line)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, line)
+	}
 }
 
 // Summary prints and writes the final categorized report.
@@ -90,9 +104,16 @@ func (r *Reporter) Summary() {
 		{StatusShortcutRemoved, "🗑️ ", "Desktop shortcuts removed"},
 	}
 
+	w := r.progressWriter
+	if w == nil {
+		w = os.Stdout
+	}
+
 	header := "\n" + strings.Repeat("=", 60) + "\nSUMMARY\n" + strings.Repeat("=", 60)
-	fmt.Println(header)
-	fmt.Fprintln(r.logFile, header)
+	fmt.Fprintln(w, header)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, header)
+	}
 
 	for _, s := range sections {
 		items := r.filterBy(s.status)
@@ -101,21 +122,95 @@ func (r *Reporter) Summary() {
 		}
 
 		heading := fmt.Sprintf("\n%s %s (%d)", s.icon, s.label, len(items))
-		fmt.Println(heading)
-		fmt.Fprintln(r.logFile, heading)
+		fmt.Fprintln(w, heading)
+		if r.logFile != nil {
+			fmt.Fprintln(r.logFile, heading)
+		}
 
 		for _, res := range items {
 			line := fmt.Sprintf("    • %s", res.Name)
 			if res.Detail != "" {
 				line += fmt.Sprintf(": %s", res.Detail)
 			}
-			fmt.Println(line)
-			fmt.Fprintln(r.logFile, line)
+			fmt.Fprintln(w, line)
+			if r.logFile != nil {
+				fmt.Fprintln(r.logFile, line)
+			}
 		}
 	}
 
-	fmt.Println()
-	fmt.Fprintln(r.logFile)
+	fmt.Fprintln(w)
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile)
+	}
+}
+
+// summaryJSON is the envelope type for JSON output.
+type summaryJSON struct {
+	Results []Result `json:"results"`
+}
+
+// SummaryJSON serializes all results to JSON and also writes to the log file.
+// Returns the raw JSON bytes for cmd/main.go to write to os.Stdout.
+func (r *Reporter) SummaryJSON() ([]byte, error) {
+	payload := summaryJSON{Results: r.results}
+	if payload.Results == nil {
+		payload.Results = []Result{}
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	data = append(data, '\n')
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, "\n--- JSON SUMMARY ---")
+		fmt.Fprintln(r.logFile, string(data))
+	}
+	return data, nil
+}
+
+// SummaryMD returns the install summary as a Markdown string and also writes to the log file.
+// Returns the Markdown string for cmd/main.go to write to os.Stdout.
+func (r *Reporter) SummaryMD() string {
+	sections := []struct {
+		status string
+		label  string
+	}{
+		{StatusInstalled,       "Installed successfully"},
+		{StatusUpgraded,        "Updated to newer version"},
+		{StatusAlready,         "Already installed (skipped)"},
+		{StatusDryRun,          "Would install (dry run)"},
+		{StatusFailed,          "Failed"},
+		{StatusSkipped,         "Skipped (dependency missing)"},
+		{StatusReboot,          "Reboot required"},
+		{StatusShortcutRemoved, "Desktop shortcuts removed"},
+	}
+
+	var sb strings.Builder
+	sb.WriteString("# KtulueKit Install Summary\n\n")
+
+	for _, s := range sections {
+		items := r.filterBy(s.status)
+		if len(items) == 0 {
+			continue
+		}
+		fmt.Fprintf(&sb, "## %s (%d)\n\n", s.label, len(items))
+		for _, res := range items {
+			line := fmt.Sprintf("- **%s** (`%s`)", res.Name, res.ID)
+			if res.Detail != "" {
+				line += fmt.Sprintf(": %s", res.Detail)
+			}
+			sb.WriteString(line + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	md := sb.String()
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, "\n--- MARKDOWN SUMMARY ---")
+		fmt.Fprintln(r.logFile, md)
+	}
+	return md
 }
 
 // HasFailures returns true if any item failed or was skipped due to a missing dependency.

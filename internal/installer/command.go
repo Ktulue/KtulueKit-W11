@@ -107,6 +107,19 @@ func isAlreadyInstalled(checkCmd string) bool {
 	return code == 0
 }
 
+// RunHook runs a post-install shell command via cmd /C with the command's timeout.
+// Returns an error if the command fails; the caller decides how to handle it (warning only).
+func RunHook(hook string, timeoutSeconds int) error {
+	code, err := runShellWithTimeout(hook, timeoutSeconds)
+	if err != nil {
+		return err
+	}
+	if code != 0 {
+		return fmt.Errorf("exit code %d", code)
+	}
+	return nil
+}
+
 // runShellWithTimeout runs a shell command via cmd.exe with a timeout.
 func runShellWithTimeout(command string, timeoutSeconds int) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)

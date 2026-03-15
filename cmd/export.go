@@ -70,6 +70,17 @@ func runExport(_ *cobra.Command, _ []string) error {
 		machine = "unknown"
 	}
 
+	if profileName != "" {
+		if err := profileFlagsError(profileName, ""); err != nil {
+			return err
+		}
+		ids, err := config.LookupProfile(cfg, profileName)
+		if err != nil {
+			return err
+		}
+		filterConfigByIDs(cfg, ids)
+	}
+
 	opts := exporter.Options{
 		SourceConfig: absConfig,
 		ToolVersion:  Version,

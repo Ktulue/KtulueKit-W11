@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -145,7 +146,7 @@ func (a *App) StartInstall(ids []string) string {
 			return
 		}
 
-		rep, err := reporter.New(cfg.Settings.LogDir)
+		rep, err := reporter.New(cfg.Settings.LogDir, os.Stdout)
 		if err != nil {
 			runtime.EventsEmit(a.ctx, "complete", SummaryResult{
 				Failed:  []string{fmt.Sprintf("Failed to create log: %v", err)},
