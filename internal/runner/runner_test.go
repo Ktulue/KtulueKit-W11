@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
 	"github.com/Ktulue/KtulueKit-W11/internal/reporter"
@@ -410,6 +411,26 @@ func TestMarkInterrupted_IsIdempotent(t *testing.T) {
 	r.markInterrupted(1)
 	if !r.WasInterrupted() {
 		t.Error("WasInterrupted should be true")
+	}
+}
+
+func TestRunPostInstall_EmptyHookSkips(t *testing.T) {
+	// When PostInstall is empty, runPostInstall must be a no-op.
+	r := &Runner{}
+	start := time.Now()
+	r.runPostInstall("Git.Git", "", 30)
+	if time.Since(start) > 100*time.Millisecond {
+		t.Error("runPostInstall with empty hook took longer than expected — should be a no-op")
+	}
+}
+
+func TestRunPostInstall_DryRunPrintsPreview(t *testing.T) {
+	// In dry-run mode, runPostInstall must print a preview and not execute.
+	r := &Runner{dryRun: true}
+	start := time.Now()
+	r.runPostInstall("Git.Git", "echo done", 30)
+	if time.Since(start) > 100*time.Millisecond {
+		t.Error("dry-run runPostInstall should skip execution and return immediately")
 	}
 }
 

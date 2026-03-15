@@ -349,6 +349,23 @@ func (r *Runner) printPreRunSummary() (nothingToDo bool) {
 	return false
 }
 
+// runPostInstall executes a post-install hook after a successful install.
+// Hook failures are warnings only and do not affect the result status.
+func (r *Runner) runPostInstall(itemName, hook string, timeoutSeconds int) {
+	if hook == "" {
+		return
+	}
+	if r.dryRun {
+		fmt.Printf("    [DRY RUN] Would run post_install: %s\n", hook)
+		return
+	}
+	fmt.Printf("    running post-install hook for %s...\n", itemName)
+	if err := installer.RunHook(hook, timeoutSeconds); err != nil {
+		fmt.Printf("    %s[WARN]%s  post-install hook failed for %s: %v\n",
+			colorYellow, colorReset, itemName, err)
+	}
+}
+
 // runPackagesInPhase runs all Tier 1 winget packages in this phase.
 func (r *Runner) runPackagesInPhase(ctx context.Context, phase int) {
 	for _, pkg := range r.cfg.Packages {
@@ -418,6 +435,10 @@ func (r *Runner) runPackagesInPhase(ctx context.Context, phase int) {
 			r.state.MarkSucceeded(pkg.ID)
 		} else if res.Status == reporter.StatusFailed {
 			r.state.MarkFailed(pkg.ID)
+		}
+
+		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded {
+			r.runPostInstall(pkg.Name, pkg.PostInstall, pkg.TimeoutSeconds)
 		}
 
 		// Clean up any shortcuts the installer dropped on the desktop.
@@ -549,6 +570,10 @@ func (r *Runner) runCommandsInPhase(ctx context.Context, phase int) {
 			if cmd.OnFailurePrompt != "" && !r.dryRun {
 				r.promptManualInstall(cmd.Name, cmd.OnFailurePrompt)
 			}
+		}
+
+		if res.Status == reporter.StatusInstalled || res.Status == reporter.StatusUpgraded {
+			r.runPostInstall(cmd.Name, cmd.PostInstall, cmd.TimeoutSeconds)
 		}
 
 		r.trackResult(res.Status)
