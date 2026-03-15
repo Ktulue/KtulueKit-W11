@@ -11,9 +11,9 @@
 
 Two overlapping PATH issues affect `python` and `go` resolution across PowerShell, bash, and Claude Code sessions:
 
-1. **Windows App Execution Alias stub** — Microsoft ships a `python.exe` / `python3.exe` stub under `%LOCALAPPDATA%\Microsoft\WindowsApps\`. When `WindowsApps` appears before the real Python install on PATH (the Windows default), any tool that calls `python` gets the stub, which opens the Microsoft Store instead of running Python. This causes failures in any context where PATH is not fully propagated.
+1. **Windows App Execution Alias stub** — Microsoft ships a `python.exe` / `python3.exe` stub under `%LOCALAPPDATA%\Microsoft\WindowsApps\`. When `WindowsApps` appears before the real Python install on PATH (the Windows default), any tool that calls `python` gets the stub, which opens the Microsoft Store instead of running Python. The stub exits non-zero when invoked non-interactively (e.g., via `cmd /C python --version`), so it does not print a version string.
 
-2. **Go `bin` dir occasionally missing** — winget installs Go to `C:\Program Files\Go\` (machine scope) and adds `C:\Program Files\Go\bin` to the system PATH, but this propagates to all processes only after a logout/reboot. In bash and Claude Code sessions that were launched before the winget install completed, `go` commands silently fail.
+2. **Go `bin` dir not yet propagated to user shells** — winget installs Go to `C:\Program Files\Go\` (machine scope) and adds `C:\Program Files\Go\bin` to the system PATH registry entry. This is visible to processes launched after the install, but bash and Claude Code sessions opened before the winget run completes do not inherit it.
 
 The W11 installer has no current handling for either issue.
 
@@ -35,13 +35,19 @@ The W11 installer has no current handling for either issue.
 
 ---
 
-## Install Scope Notes
+## Install Scope and RefreshPath Notes
 
-`ktuluekit.json` sets `default_scope: "machine"`. Python (`Python.Python.3.12`) has no scope override, so it installs machine-scope. Machine-scope Python winget installs to `C:\Program Files\Python312\` and winget adds `C:\Program Files\Python312\` + `\Scripts` to the **system** PATH automatically.
+`ktuluekit.json` sets `default_scope: "machine"`. Python (`Python.Python.3.12`) has no scope override, so it installs machine-scope. Machine-scope Python winget installs to `C:\Program Files\Python312\` and winget adds that dir and `\Scripts` to the **system** PATH registry entry automatically.
 
-The current machine's Python is at `%LOCALAPPDATA%\Programs\Python\Python312\` — a legacy user-scope install predating the installer. Both paths are valid; the alias disable resolves the stub conflict in either case.
+The runner calls `installer.RefreshPath()` before phase 4. This reads both Machine and User PATH from the registry and injects them into the runner's in-process environment. All child processes the runner spawns (via `cmd /C`) inherit that environment. This means:
 
-**The alias disable is the primary fix.** PATH injection in the installer entry is a safety net for edge cases where winget fails to update system PATH (e.g., mid-session, or a quirky install). It must use dynamic path detection, not a hardcoded path.
+- After phase 1 winget installs complete and `RefreshPath()` fires, `python` and `go` are already resolvable in child processes spawned by the runner for phase 4 commands.
+- The alias disable in `fix-python-alias` is still needed: `RefreshPath()` makes the real Python findable, but if `WindowsApps` appears first in the refreshed PATH, the stub still wins.
+- The User PATH injection in `fix-go-path` targets user shell sessions opened after the installer run — not the installer's own execution. During the installer run, `RefreshPath()` already surfaces `C:\Program Files\Go\bin` via the system PATH.
+
+**The alias disable is the primary fix for Python.** The Go PATH injection is a convenience for post-run shells.
+
+The current machine's Python is at `%LOCALAPPDATA%\Programs\Python\Python312\` — a legacy user-scope install predating the installer. The alias disable resolves the stub conflict regardless of whether the install is user-scope or machine-scope.
 
 ---
 
@@ -53,7 +59,7 @@ Two parallel deliverables:
 Run PowerShell commands in this session to disable the stub and verify resolution.
 
 **B. `ktuluekit.json` command entries**
-Two new command entries that apply the same fix automatically on fresh installs, inserted at the correct position in the `commands` array.
+Two new command entries that apply the same fix automatically on fresh installs, inserted at the correct position in the `commands` array, plus a profiles update.
 
 ---
 
@@ -86,18 +92,17 @@ Open a new `pwsh` invocation (picks up updated User PATH):
 pwsh -NoProfile -Command "python --version"
 ```
 
-Expected output: `Python 3.12.x`. If still failing, the real Python dir is not on PATH at all — inject it manually:
+Expected output: `Python 3.12.x`. If still failing, the real Python dir is not on PATH at all — inject it manually (current machine is user-scope, so use the user-scope path):
 
 ```powershell
-# Only needed if python still fails after alias disable:
-$pyDir = (Get-Command python -ErrorAction SilentlyContinue)?.Source | Split-Path
-# If Get-Command still finds the stub, locate the real install:
-$pyDir = "$env:LOCALAPPDATA\Programs\Python\Python312"  # user-scope fallback
+$pyDir = "$env:LOCALAPPDATA\Programs\Python\Python312"
 $cur = [Environment]::GetEnvironmentVariable('PATH', 'User')
 if ($cur -notlike "*Python312*") {
     [Environment]::SetEnvironmentVariable('PATH', "$pyDir;$pyDir\Scripts;$cur", 'User')
 }
 ```
+
+Then open a new shell and re-verify.
 
 ### 3. Verify Go resolution
 
@@ -105,7 +110,7 @@ if ($cur -notlike "*Python312*") {
 pwsh -NoProfile -Command "go version"
 ```
 
-Expected: `go version go1.x.x windows/amd64`. If failing, inject `C:\Program Files\Go\bin` into User PATH:
+Expected: `go version go1.x.x windows/amd64`. If failing (bash/Claude Code session predates the install), inject `C:\Program Files\Go\bin` into User PATH so new shells pick it up:
 
 ```powershell
 $goDir = "C:\Program Files\Go\bin"
@@ -123,9 +128,13 @@ if ($cur -notlike "*Go\bin*") {
 
 Commands in `ktuluekit.json` use phases 3, 4, and 5. All commands that depend on winget packages live in **phase 4**. Both new entries use `phase: 4`.
 
+### `depends_on` cross-tier note
+
+`depends_on` entries may reference IDs from either the `packages` or `commands` arrays — the runner resolves both against the same succeeded state map. Using a package ID like `"Python.Python.3.12"` in a command's `depends_on` is supported and correct.
+
 ### Array insertion position
 
-The runner processes commands in JSON array order within a phase. `fix-python-alias` must appear **before** `pip-pipx` in the array so that `python` resolves correctly before pipx commands run. Additionally, `pip-pipx`'s `depends_on` must be updated to include `fix-python-alias`.
+The runner processes commands in JSON array order within a phase. `fix-python-alias` must appear **before** `pip-pipx` in the array. Additionally, `pip-pipx`'s `depends_on` must be updated to include `fix-python-alias`.
 
 ### Entry 1: `fix-python-alias`
 
@@ -141,10 +150,9 @@ The runner processes commands in JSON array order within a phase. `fix-python-al
 ```
 
 **Behavior:**
-- `check` runs `python --version | findstr "Python 3.12"`. If it matches (exit 0), the command is skipped.
-- The `check` skip-on-success is correct: if `python` already resolves to 3.12, the alias is either already disabled or the real Python is winning the PATH race regardless — in both cases, the alias is not causing problems and the command can safely be skipped.
-- If check fails (stub, wrong version, or not found), the command disables both alias registry keys.
-- The command intentionally does **not** inject a hardcoded Python path — the machine-scope winget install updates system PATH; if that propagation hasn't happened yet in the current session, the user should restart their shell after the install run.
+- `check` runs `cmd /C python --version | findstr "Python 3.12"`. The Microsoft Store stub exits non-zero when invoked non-interactively, so if the stub is active, the check fails and the command runs. If `python --version` exits 0 and matches `Python 3.12`, the stub is either already disabled or not intercepting the lookup in this context — either way, the fix is not needed and the command is skipped.
+- The command disables both `python.exe` and `python3.exe` alias keys.
+- The command does not inject a Python PATH entry. After `RefreshPath()`, the machine-scope winget install is already on the child process PATH. The alias disable is sufficient.
 - `depends_on: ["Python.Python.3.12"]` ensures real Python is installed before this runs.
 
 ### Entry 2: `fix-go-path`
@@ -161,18 +169,29 @@ The runner processes commands in JSON array order within a phase. `fix-python-al
 ```
 
 **Behavior:**
-- `check` runs `go version`. If it exits 0, skip.
-- If `go` is not on PATH, injects `C:\Program Files\Go\bin` at the front of User PATH.
-- `C:\Program Files\Go\bin` is the winget machine-scope install location for `GoLang.Go`.
+- `check` runs `go version`. If `go` resolves from any location (exit 0), the command is skipped. The goal is "go is resolvable," not "exactly this path is on User PATH."
+- During the installer run, `RefreshPath()` will have already surfaced `C:\Program Files\Go\bin` via the machine system PATH, so the check will typically pass and this command will be skipped. The command exists as a convenience for post-run user shell sessions where the system PATH registry update hasn't propagated yet.
+- The path `C:\Program Files\Go\bin` is hardcoded. This is acceptable for Go: winget machine-scope `GoLang.Go` always installs to this location, there is no user-scope variant, and the path is not machine-specific.
 - `depends_on: ["GoLang.Go"]` ensures winget has completed the Go install first.
 
 ### `pip-pipx` update
 
-Add `fix-python-alias` to `pip-pipx`'s `depends_on` to enforce ordering:
+Add `fix-python-alias` to `pip-pipx`'s `depends_on`:
 
 ```json
 "depends_on": ["Python.Python.3.12", "fix-python-alias"]
 ```
+
+### Profiles update
+
+`ktuluekit.json` contains named profiles (Full Setup, Dev Only, etc.). The runner only runs commands whose IDs appear in the active profile's `ids` list. Any profile that includes `pip-pipx` must also include `fix-python-alias` — otherwise `fix-python-alias` never succeeds, and `pip-pipx`'s `depends_on` check fails, causing `pip-pipx` to be skipped.
+
+Add `fix-python-alias` and `fix-go-path` to every profile that currently includes `pip-pipx`, `pip-black`, or `pip-ruff`. Based on the existing config this means:
+
+- **Full Setup** — add both `fix-python-alias` and `fix-go-path`
+- **Dev Only** — add both `fix-python-alias` and `fix-go-path`
+
+If a profile does not include any Python or Go commands, no change is needed.
 
 ---
 
@@ -199,7 +218,9 @@ Phase 1 (winget):
   GoLang.Go ──────────────┤
   (all other wingets)      │
                            │
-Phase 4 (commands):        ▼
+  [RefreshPath() fires]    ▼
+
+Phase 4 (commands):
   [existing phase-4 entries above insertion point]
   fix-python-alias  (depends_on: Python.Python.3.12)  ← insert here
   fix-go-path       (depends_on: GoLang.Go)            ← insert here
@@ -221,4 +242,5 @@ Phase 4 (commands):        ▼
 - [ ] `fix-python-alias` (phase 4) and `fix-go-path` (phase 4) appear in `ktuluekit.json`
 - [ ] `fix-python-alias` is inserted before `pip-pipx` in the JSON array
 - [ ] `pip-pipx` has `depends_on: ["Python.Python.3.12", "fix-python-alias"]`
+- [ ] `fix-python-alias` and `fix-go-path` added to Full Setup and Dev Only profiles
 - [ ] Both command entries are idempotent (re-running does not duplicate PATH entries or error on already-disabled aliases)
