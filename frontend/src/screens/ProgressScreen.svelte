@@ -72,7 +72,7 @@
     flex: 1;
     background: var(--color-border);
     border-radius: var(--radius);
-    height: 8px;
+    height: var(--spacing-md);
     overflow: hidden;
   }
 
