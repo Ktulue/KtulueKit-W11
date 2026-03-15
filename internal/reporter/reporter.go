@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -142,6 +143,74 @@ func (r *Reporter) Summary() {
 	if r.logFile != nil {
 		fmt.Fprintln(r.logFile)
 	}
+}
+
+// summaryJSON is the envelope type for JSON output.
+type summaryJSON struct {
+	Results []Result `json:"results"`
+}
+
+// SummaryJSON serializes all results to JSON and also writes to the log file.
+// Returns the raw JSON bytes for cmd/main.go to write to os.Stdout.
+func (r *Reporter) SummaryJSON() ([]byte, error) {
+	payload := summaryJSON{Results: r.results}
+	if payload.Results == nil {
+		payload.Results = []Result{}
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	data = append(data, '\n')
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, "\n--- JSON SUMMARY ---")
+		fmt.Fprintln(r.logFile, string(data))
+	}
+	return data, nil
+}
+
+// SummaryMD returns the install summary as a Markdown string and also writes to the log file.
+// Returns the Markdown string for cmd/main.go to write to os.Stdout.
+func (r *Reporter) SummaryMD() string {
+	sections := []struct {
+		status string
+		label  string
+	}{
+		{StatusInstalled,       "Installed successfully"},
+		{StatusUpgraded,        "Updated to newer version"},
+		{StatusAlready,         "Already installed (skipped)"},
+		{StatusDryRun,          "Would install (dry run)"},
+		{StatusFailed,          "Failed"},
+		{StatusSkipped,         "Skipped (dependency missing)"},
+		{StatusReboot,          "Reboot required"},
+		{StatusShortcutRemoved, "Desktop shortcuts removed"},
+	}
+
+	var sb strings.Builder
+	sb.WriteString("# KtulueKit Install Summary\n\n")
+
+	for _, s := range sections {
+		items := r.filterBy(s.status)
+		if len(items) == 0 {
+			continue
+		}
+		fmt.Fprintf(&sb, "## %s (%d)\n\n", s.label, len(items))
+		for _, res := range items {
+			line := fmt.Sprintf("- **%s** (`%s`)", res.Name, res.ID)
+			if res.Detail != "" {
+				line += fmt.Sprintf(": %s", res.Detail)
+			}
+			sb.WriteString(line + "\n")
+		}
+		sb.WriteString("\n")
+	}
+
+	md := sb.String()
+	if r.logFile != nil {
+		fmt.Fprintln(r.logFile, "\n--- MARKDOWN SUMMARY ---")
+		fmt.Fprintln(r.logFile, md)
+	}
+	return md
 }
 
 // HasFailures returns true if any item failed or was skipped due to a missing dependency.
