@@ -102,6 +102,13 @@ func (s *State) MarkFailed(id string) {
 	_ = s.Save()
 }
 
+// DeleteSucceeded removes id from the Succeeded map and persists state.
+// Used after a successful uninstall. No-op if id is not present.
+func (s *State) DeleteSucceeded(id string) {
+	delete(s.Succeeded, id)
+	_ = s.Save()
+}
+
 // SaveResumePhase records the next phase to start from and persists state.
 func (s *State) SaveResumePhase(phase int) error {
 	s.ResumePhase = phase
