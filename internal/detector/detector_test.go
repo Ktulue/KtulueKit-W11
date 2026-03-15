@@ -1,6 +1,7 @@
 package detector_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/Ktulue/KtulueKit-W11/internal/config"
@@ -293,5 +294,28 @@ func TestRunCheckDetailed_ExitNonZero_ReturnsAbsent(t *testing.T) {
 	}
 	if timedOut {
 		t.Error("expected timedOut=false — non-zero exit is not a timeout")
+	}
+}
+
+// TestRunCheckDetailed_Timeout verifies that a command that exceeds the
+// 15-second timeout returns timedOut=true and installed=false.
+//
+// This test sleeps for longer than the detector's checkTimeoutSeconds (15s),
+// so it is guarded by TEST_SLOW=1 to avoid slowing the default test run.
+// Run with: TEST_SLOW=1 go test ./internal/detector/... -v -run TestRunCheckDetailed_Timeout -timeout 30s
+func TestRunCheckDetailed_Timeout(t *testing.T) {
+	if os.Getenv("TEST_SLOW") == "" {
+		t.Skip("skipping slow timeout test; set TEST_SLOW=1 to run")
+	}
+
+	// "timeout /T 20 /NOBREAK" sleeps for 20 seconds in both interactive and
+	// non-interactive Windows cmd.exe contexts, exceeding the 15s detector timeout.
+	installed, timedOut := detector.RunCheckDetailed("timeout /T 20 /NOBREAK")
+
+	if installed {
+		t.Error("expected installed=false for timed-out command")
+	}
+	if !timedOut {
+		t.Error("expected timedOut=true for command that exceeds timeout")
 	}
 }
