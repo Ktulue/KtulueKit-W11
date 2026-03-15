@@ -94,6 +94,46 @@ func RunCommand(cmd config.Command, dryRun bool, retryCount int, s *state.State)
 	return res
 }
 
+// RunUninstallCommand handles Tier 2 command uninstall.
+// ScrapeURL (T4) items are always skipped. Items without UninstallCmd are skipped.
+func RunUninstallCommand(cmd config.Command, dryRun bool) reporter.Result {
+	res := reporter.Result{ID: cmd.ID, Name: cmd.Name, Tier: "command"}
+
+	if cmd.ScrapeURL != "" {
+		res.Status = reporter.StatusSkipped
+		res.Detail = "scrape-download items cannot be uninstalled automatically — remove via Windows Settings"
+		return res
+	}
+	if cmd.UninstallCmd == "" {
+		res.Status = reporter.StatusSkipped
+		res.Detail = "no uninstall_cmd defined for this item"
+		return res
+	}
+	if dryRun {
+		res.Status = reporter.StatusDryRun
+		res.Detail = fmt.Sprintf("[DRY RUN] Would run uninstall_cmd: %s", cmd.UninstallCmd)
+		return res
+	}
+
+	timeout := cmd.TimeoutSeconds
+	if timeout == 0 {
+		timeout = checkTimeoutSeconds
+	}
+
+	exitCode, err := runShellWithTimeout(cmd.UninstallCmd, timeout)
+	res.ExitCode = exitCode
+	if exitCode == 0 && err == nil {
+		res.Status = reporter.StatusInstalled
+	} else {
+		res.Status = reporter.StatusFailed
+		res.Detail = fmt.Sprintf("exit code %d", exitCode)
+		if err != nil {
+			res.Detail += fmt.Sprintf(": %s", err.Error())
+		}
+	}
+	return res
+}
+
 // checkTimeoutSeconds is a short timeout used for "already installed?" detection commands.
 // These commands (e.g. "claude --version") should complete in well under 15 seconds.
 const checkTimeoutSeconds = 15
