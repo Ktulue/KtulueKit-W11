@@ -324,6 +324,10 @@ func resolveConfigPaths(paths []string) (resolved []string, cleanup func(), err 
 	for _, p := range paths {
 		switch {
 		case strings.HasPrefix(p, "https://"):
+			// SECURITY-ACCEPT: Remote config is a full trust boundary. A compromised remote config
+			// URL can deliver shell commands that execute as Administrator (cmd/C fields, post_install,
+			// check). Only point --config at URLs you directly control (e.g., your own GitHub raw content).
+			// No allowlist is enforced — threat model is single-owner, controlled origin.
 			tmp, fetchErr := fetchToTemp(p)
 			if fetchErr != nil {
 				cleanup()
