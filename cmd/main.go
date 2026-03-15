@@ -285,6 +285,52 @@ func profileFlagsError(profile, only string) error {
 	return nil
 }
 
+// resolveConfigPaths resolves a mixed list of local file paths and https:// URLs
+// into a flat list of local file paths, downloading remote configs to temp files.
+//
+// Rules:
+//   - https:// URLs: fetched to a temp file; temp path appended to resolved.
+//   - http:// URLs: rejected immediately with an error.
+//   - All other paths: appended as-is (no existence check performed here).
+//
+// The returned cleanup func removes all temp files created during resolution.
+// Call it with defer after config.LoadAll returns. cleanup is always non-nil.
+func resolveConfigPaths(paths []string) (resolved []string, cleanup func(), err error) {
+	var temps []string
+	cleanup = func() {
+		for _, f := range temps {
+			_ = os.Remove(f)
+		}
+	}
+
+	for _, p := range paths {
+		switch {
+		case strings.HasPrefix(p, "https://"):
+			tmp, fetchErr := fetchToTemp(p)
+			if fetchErr != nil {
+				cleanup()
+				return nil, func() {}, fetchErr
+			}
+			temps = append(temps, tmp)
+			resolved = append(resolved, tmp)
+
+		case strings.HasPrefix(p, "http://"):
+			cleanup()
+			return nil, func() {}, fmt.Errorf("insecure URL rejected: %q — only https:// is supported", p)
+
+		default:
+			resolved = append(resolved, p)
+		}
+	}
+
+	return resolved, cleanup, nil
+}
+
+// fetchToTemp is implemented in Task 2.
+func fetchToTemp(url string) (string, error) {
+	return "", fmt.Errorf("fetchToTemp: not yet implemented")
+}
+
 // outputFormatError returns an error if the requested format is not supported.
 func outputFormatError(format string) error {
 	switch format {
