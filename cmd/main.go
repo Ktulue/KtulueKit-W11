@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -326,9 +327,66 @@ func resolveConfigPaths(paths []string) (resolved []string, cleanup func(), err 
 	return resolved, cleanup, nil
 }
 
-// fetchToTemp is implemented in Task 2.
+// httpClient is the HTTP client used by fetchToTemp. Tests may replace this
+// to inject a custom transport (e.g., httptest.Server.Client()).
+var httpClient = &http.Client{}
+
+const (
+	fetchTimeout  = 15 * time.Second
+	fetchMaxBytes = 1 << 20 // 1 MiB
+)
+
+// fetchToTemp downloads url to a temp file and returns the temp file path.
+// The caller is responsible for removing the file when done.
+//
+// Guardrails:
+//   - 15-second total timeout (context deadline)
+//   - 1 MiB response body cap — returns error if exceeded
+//   - Non-2xx status rejected with the status code in the error message
 func fetchToTemp(url string) (string, error) {
-	return "", fmt.Errorf("fetchToTemp: not yet implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("fetch %q: build request: %w", url, err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch %q: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("fetch %q: server returned %d", url, resp.StatusCode)
+	}
+
+	// Read up to fetchMaxBytes+1 to detect over-limit responses.
+	limited := io.LimitReader(resp.Body, fetchMaxBytes+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return "", fmt.Errorf("fetch %q: read body: %w", url, err)
+	}
+	if int64(len(data)) > fetchMaxBytes {
+		return "", fmt.Errorf("fetch %q: response exceeds 1 MiB limit", url)
+	}
+
+	tmp, err := os.CreateTemp("", "ktuluekit-remote-*.json")
+	if err != nil {
+		return "", fmt.Errorf("fetch %q: create temp file: %w", url, err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
+		return "", fmt.Errorf("fetch %q: write temp file: %w", url, err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmp.Name())
+		return "", fmt.Errorf("fetch %q: close temp file: %w", url, err)
+	}
+
+	return tmp.Name(), nil
 }
 
 // outputFormatError returns an error if the requested format is not supported.

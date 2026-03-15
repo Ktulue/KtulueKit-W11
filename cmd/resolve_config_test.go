@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -90,6 +94,146 @@ func TestResolveConfigPaths_MixedLocalPaths(t *testing.T) {
 	}
 	if resolved[1] != abs {
 		t.Errorf("expected resolved[1] = %q, got %q", abs, resolved[1])
+	}
+}
+
+// TestFetchToTemp_Success verifies a valid HTTPS URL is downloaded to a temp file
+// whose contents match the server response.
+func TestFetchToTemp_Success(t *testing.T) {
+	body := `{"packages":[],"commands":[],"extensions":[]}`
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	tmp, err := fetchToTemp(srv.URL)
+	if err != nil {
+		t.Fatalf("fetchToTemp() error: %v", err)
+	}
+	defer os.Remove(tmp)
+
+	got, err := os.ReadFile(tmp)
+	if err != nil {
+		t.Fatalf("ReadFile(%q): %v", tmp, err)
+	}
+	if string(got) != body {
+		t.Errorf("temp file contents = %q, want %q", got, body)
+	}
+}
+
+// TestFetchToTemp_SizeCap verifies that a response exceeding 1 MiB is rejected.
+func TestFetchToTemp_SizeCap(t *testing.T) {
+	bigBody := strings.Repeat("x", fetchMaxBytes+1)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, bigBody)
+	}))
+	defer srv.Close()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	_, err := fetchToTemp(srv.URL)
+	if err == nil {
+		t.Fatal("expected error for oversized response, got nil")
+	}
+	if !containsAll(err.Error(), "1 MiB") {
+		t.Errorf("error should mention 1 MiB limit, got: %v", err)
+	}
+}
+
+// TestFetchToTemp_Non200 verifies that non-200 HTTP status codes are rejected.
+func TestFetchToTemp_Non200(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	_, err := fetchToTemp(srv.URL)
+	if err == nil {
+		t.Fatal("expected error for 404, got nil")
+	}
+	if !containsAll(err.Error(), "404") {
+		t.Errorf("error should mention 404, got: %v", err)
+	}
+}
+
+// TestResolveConfigPaths_HTTPSFetch verifies the full resolveConfigPaths flow
+// with an https:// URL resolves to a temp file containing the expected content.
+func TestResolveConfigPaths_HTTPSFetch(t *testing.T) {
+	body := `{"packages":[],"commands":[],"extensions":[]}`
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	input := []string{"local.json", srv.URL}
+	resolved, cleanup, err := resolveConfigPaths(input)
+	if err != nil {
+		t.Fatalf("resolveConfigPaths error: %v", err)
+	}
+	defer cleanup()
+
+	if len(resolved) != 2 {
+		t.Fatalf("expected 2 resolved paths, got %d: %v", len(resolved), resolved)
+	}
+	if resolved[0] != "local.json" {
+		t.Errorf("resolved[0] = %q, want %q", resolved[0], "local.json")
+	}
+
+	got, err := os.ReadFile(resolved[1])
+	if err != nil {
+		t.Fatalf("ReadFile(%q): %v", resolved[1], err)
+	}
+	if string(got) != body {
+		t.Errorf("temp file content = %q, want %q", got, body)
+	}
+}
+
+// TestResolveConfigPaths_CleanupRemovesTempFiles verifies that calling cleanup()
+// removes temp files created for https:// URLs.
+func TestResolveConfigPaths_CleanupRemovesTempFiles(t *testing.T) {
+	body := `{"packages":[]}`
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+
+	origClient := httpClient
+	httpClient = srv.Client()
+	defer func() { httpClient = origClient }()
+
+	resolved, cleanup, err := resolveConfigPaths([]string{srv.URL})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resolved) != 1 {
+		t.Fatalf("expected 1 resolved path, got %d", len(resolved))
+	}
+	tmpPath := resolved[0]
+
+	if _, err := os.Stat(tmpPath); err != nil {
+		t.Fatalf("temp file should exist before cleanup: %v", err)
+	}
+
+	cleanup()
+
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Error("temp file should be removed after cleanup()")
 	}
 }
 
