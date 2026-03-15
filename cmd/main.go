@@ -94,6 +94,17 @@ Use --fast to skip check commands and use the KtulueKit state file instead.`,
 	exportCmd.Flags().BoolVar(&exportFast, "fast", false, "Use state file instead of running check commands")
 	root.AddCommand(exportCmd)
 
+	uninstallCmd := &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall config-listed items from this machine",
+		RunE:  runUninstall,
+	}
+	uninstallCmd.Flags().StringVar(&onlyIDs, "only", "", "comma-separated list of IDs to uninstall")
+	uninstallCmd.Flags().StringVar(&excludeIDs, "exclude", "", "comma-separated list of IDs to skip")
+	uninstallCmd.Flags().StringVar(&profileName, "profile", "", "named profile from config")
+	uninstallCmd.Flags().BoolVar(&dryRun, "dry-run", false, "preview without making changes")
+	root.AddCommand(uninstallCmd)
+
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
